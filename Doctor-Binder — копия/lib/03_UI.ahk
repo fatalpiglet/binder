@@ -836,17 +836,17 @@ class DarkSelect {
     }
 
     Enabled {
-        get => this.enabled
+        get => this.isEnabled
         set {
-            this.enabled := value ? true : false
-            this.btn.isClickable := this.enabled
+            this.isEnabled := value ? true : false
+            this.btn.isClickable := this.isEnabled
             this.ApplyIdle()
         }
     }
 
     ApplyIdle() {
         global THEME
-        if this.enabled
+        if this.isEnabled
             this.btn.SetVisual("0d1117", "e5e7eb", "121820", "232a36")
         else
             this.btn.SetVisual("0d1117", THEME["textDisabled"], "0d1117", "232a36")
@@ -855,7 +855,7 @@ class DarkSelect {
 
     Open() {
         global THEME, MainGui
-        if !this.enabled
+        if !this.isEnabled
             return
         try {
             if DarkSelect.OpenGui
