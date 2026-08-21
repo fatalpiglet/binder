@@ -455,6 +455,33 @@ CreateStyledButton(parent, x, y, w, h, text, callback, style := "default", tip :
     return StyledBtn(parent, x, y, w, h, text, callback, style, tip)
 }
 
+ParkGuiCtrl(ctrl, park := true) {
+    static saved := Map()
+    if !IsObject(ctrl)
+        return
+    try hwnd := ctrl.Hwnd
+    catch
+        return
+    if !hwnd
+        return
+    if park {
+        if !saved.Has(hwnd) {
+            try {
+                ctrl.GetPos(&px, &py)
+                saved[hwnd] := [px, py]
+            }
+        }
+        try ctrl.Visible := false
+        try ctrl.Move(-8000, -8000)
+    } else {
+        if saved.Has(hwnd) {
+            try ctrl.Move(saved[hwnd][1], saved[hwnd][2])
+            saved.Delete(hwnd)
+        }
+        try ctrl.Visible := true
+    }
+}
+
 ; Скругляет Win32/AHK-контрол без внешних декоративных пикселей.
 ; SetWindowRgn передаёт владение созданным HRGN окну при успешном вызове,
 ; поэтому удаляем region только если SetWindowRgn завершился неудачно.
@@ -1567,6 +1594,4 @@ StyleCheckbox(ctrl) {
 
 ; ══════════════════════════════════════════════════════════════════════════
 ; СИСТЕМА РАДИАЛЬНОГО МЕНЮ (WHEEL MENU) - ИСПРАВЛЕННАЯ
-; ══════════════════════════════════════════════════════════════════════════
-�ОГО МЕНЮ (WHEEL MENU) - ИСПРАВЛЕННАЯ
 ; ══════════════════════════════════════════════════════════════════════════
