@@ -607,7 +607,7 @@ CreateInput(parent, x, y, w, h, options := "", value := "", fontSize := 10, back
 ; Маленький muted-label над полем (LABEL в верхнем регистре).
 CreateFieldLabel(parent, x, y, w, text, color := "") {
     global THEME
-    lbl := parent.AddText("x" x " y" y " w" w " h15 BackgroundTrans c" (color = "" ? THEME["textDim"] : color), text)
+    lbl := parent.AddText("x" x " y" y " w" w " h17 BackgroundTrans c" (color = "" ? THEME["textDim"] : color), text)
     lbl.SetFont("s" THEME["fontMeta"] " bold", THEME["fontFamily"])
     return lbl
 }
@@ -634,7 +634,169 @@ CreateCard(parent, x, y, w, h, radius := 0, surfaceColor := "") {
     SendPanelToBack(top)
     SendPanelToBack(surface)
     SendPanelToBack(frame)
-    return {frame: frame, surface: surface}
+    return {frame: frame, surface: surface, top: top}
+}
+
+; ─── Строка-карточка настройки с hover ────────────────────────────────────────
+; Тексты внутри создаются НЕпрозрачными в цвет поверхности, поэтому при
+; наведении строка подсвечивается целиком и без «чёрных прямоугольников».
+class HoverCard {
+    static Registry := []
+
+    __New(parent, x, y, w, h, radius := 0, surfaceColor := "", hoverColor := "") {
+        global THEME
+        this.parent := parent
+        this.surfaceColor := surfaceColor = "" ? THEME["bgElevated"] : surfaceColor
+        this.hoverColor := hoverColor = "" ? THEME["bgHover"] : hoverColor
+        card := CreateCard(parent, x, y, w, h, radius ? radius : THEME["radiusLg"], this.surfaceColor)
+        this.frame := card.frame
+        this.surface := card.surface
+        this.topLine := card.top
+        this.children := []
+        this.hovered := false
+        this.visible := true
+        HoverCard.Registry.Push(this)
+    }
+
+    ; Регистрирует контрол внутри строки, чтобы он подсвечивался вместе с ней
+    Add(ctrl) {
+        this.children.Push(ctrl)
+        return ctrl
+    }
+
+    SetHover(state) {
+        if this.hovered = state
+            return
+        this.hovered := state
+        color := state ? this.hoverColor : this.surfaceColor
+        try {
+            this.surface.Opt("Background" color)
+            this.surface.Redraw()
+        }
+        for c in this.children {
+            try {
+                c.Opt("Background" color)
+                c.Redraw()
+            }
+        }
+    }
+
+    SetVisible(state) {
+        this.visible := state
+        try this.frame.Visible := state
+        try this.surface.Visible := state
+        try this.topLine.Visible := state
+        for c in this.children {
+            try c.Visible := state
+        }
+    }
+}
+
+; ─── Кастомный переключатель Doctor Binder ────────────────────────────────────
+; Внешне — аккуратный квадрат с зелёной галочкой и очень мягким свечением.
+; Внутри — обычный скрытый Checkbox с тем же v-именем, поэтому вся существующая
+; логика (чтение .Value, RefreshMainGui, CheckSettingsDirty) работает без правок.
+class ToggleBox {
+    static Registry := []
+
+    __New(parent, x, y, name, checked := false, onToggle := "", backdrop := "", size := 20) {
+        global THEME
+        this.parent := parent
+        this.name := name
+        this.size := size
+        this.enabled := true
+        this.onToggle := onToggle
+        this.backdrop := backdrop = "" ? THEME["bgElevated"] : backdrop
+
+        ; Скрытый настоящий чекбокс — источник истины для логики приложения
+        this.hidden := parent.AddCheckbox("x0 y0 w0 h0 Hidden v" name " Checked" (checked ? 1 : 0), "")
+
+        this.glowOff := this.backdrop
+        this.glowOn := BlendHex(this.backdrop, THEME["success"], 0.22)
+        this.glow := parent.AddText("x" (x - 2) " y" (y - 2) " w" (size + 4) " h" (size + 4)
+            " Background" this.glowOff, "")
+        RoundCorners(this.glow, size + 4, size + 4, 8)
+
+        this.frame := parent.AddText("x" x " y" y " w" size " h" size " Background" THEME["fieldBorder"], "")
+        RoundCorners(this.frame, size, size, 6)
+
+        this.box := parent.AddText("x" (x + 1) " y" (y + 1) " w" (size - 2) " h" (size - 2)
+            " Center 0x200 Background" THEME["field"] " c" THEME["field"], "✓")
+        this.box.SetFont("s10 bold", "Segoe UI Symbol")
+        RoundCorners(this.box, size - 2, size - 2, 6)
+        this.box.OnEvent("Click", (*) => this.Toggle())
+
+        ToggleBox.Registry.Push(this)
+        this.Apply()
+    }
+
+    ; Клик по подписи тоже переключает настройку
+    AttachLabel(ctrl) {
+        try ctrl.OnEvent("Click", (*) => this.Toggle())
+        return ctrl
+    }
+
+    Value {
+        get {
+            try return this.hidden.Value
+            return 0
+        }
+        set {
+            try this.hidden.Value := value ? 1 : 0
+            this.Apply()
+        }
+    }
+
+    Toggle() {
+        if !this.enabled
+            return
+        this.Value := this.Value ? 0 : 1
+        if this.onToggle
+            try this.onToggle.Call(this)
+    }
+
+    SetEnabled(state) {
+        this.enabled := state
+        this.Apply()
+    }
+
+    Apply() {
+        global THEME
+        on := false
+        try on := this.hidden.Value ? true : false
+        if !this.enabled {
+            markColor := on ? THEME["textDisabled"] : THEME["field"]
+            borderColor := THEME["border"]
+        } else {
+            markColor := on ? THEME["success"] : THEME["field"]
+            borderColor := on ? THEME["successDark"] : THEME["fieldBorder"]
+        }
+        try {
+            this.box.Opt("c" markColor)
+            this.box.Redraw()
+        }
+        try {
+            this.frame.Opt("Background" borderColor)
+            this.frame.Redraw()
+        }
+        try {
+            this.glow.Opt("Background" ((on && this.enabled) ? this.glowOn : this.glowOff))
+            this.glow.Redraw()
+        }
+    }
+
+    SetVisible(state) {
+        try this.glow.Visible := state
+        try this.frame.Visible := state
+        try this.box.Visible := state
+    }
+
+    ; Обновить все переключатели после программного изменения значений
+    static SyncAll() {
+        for t in ToggleBox.Registry {
+            try t.Apply()
+        }
+    }
 }
 
 ; Очень мягкое свечение вокруг карточки (активное состояние).
@@ -861,6 +1023,17 @@ PollButtonHover() {
                 }
             }
         }
+        ; hover строк-карточек (настройки)
+        for hc in HoverCard.Registry {
+            state := IsPanelUnderMouse(hc, mouseX, mouseY, winId)
+            if (hc.hovered != state)
+                try hc.SetHover(state)
+        }
+    } else {
+        for hc in HoverCard.Registry {
+            if hc.hovered
+                try hc.SetHover(false)
+        }
     }
 
     ; hover полей ввода (border: #202D3B → #344252)
@@ -882,6 +1055,31 @@ PollButtonHover() {
 
     lastButton := hitButton
     lastWinId := winId
+}
+
+; Наведение на строку-карточку (страница настроек)
+IsPanelUnderMouse(panel, mouseX, mouseY, winId) {
+    if !IsObject(panel)
+        return false
+    try {
+        if panel.parent.Hwnd != winId
+            return false
+        if !panel.visible
+            return false
+        if !DllCall("user32\IsWindowVisible", "Ptr", panel.surface.Hwnd)
+            return false
+        panel.surface.GetPos(&x, &y, &w, &h)
+        point := Buffer(8, 0)
+        NumPut("Int", x, point, 0)
+        NumPut("Int", y, point, 4)
+        DllCall("user32\ClientToScreen", "Ptr", panel.parent.Hwnd, "Ptr", point)
+        screenX := NumGet(point, 0, "Int")
+        screenY := NumGet(point, 4, "Int")
+        return mouseX >= screenX && mouseX < screenX + w
+            && mouseY >= screenY && mouseY < screenY + h
+    } catch {
+        return false
+    }
 }
 
 IsInputUnderMouse(fld, mouseX, mouseY, winId) {
@@ -947,6 +1145,28 @@ CleanupHoverButtons(gui) {
             }
         }
         InputField.Registry := aliveInputs
+
+        aliveCards := []
+        for hc in HoverCard.Registry {
+            try {
+                if !IsObject(hc) || !IsObject(hc.parent) || hc.parent = gui
+                    continue
+                if hc.surface.Hwnd && WinExist("ahk_id " hc.surface.Hwnd)
+                    aliveCards.Push(hc)
+            }
+        }
+        HoverCard.Registry := aliveCards
+
+        aliveToggles := []
+        for tg in ToggleBox.Registry {
+            try {
+                if !IsObject(tg) || !IsObject(tg.parent) || tg.parent = gui
+                    continue
+                if tg.frame.Hwnd && WinExist("ahk_id " tg.frame.Hwnd)
+                    aliveToggles.Push(tg)
+            }
+        }
+        ToggleBox.Registry := aliveToggles
     }
     if !IsObject(HoverButtons) {
         HoverButtons := []

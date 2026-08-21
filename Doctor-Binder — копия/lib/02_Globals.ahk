@@ -43,8 +43,9 @@ global THEME := Map(
     "text",         "f2f4f7",
     "textTitle",    "f7f9fc",
     "textBody",     "dde3ea",
-    "textDim",      "a3adba",   ; вторичный текст — чуть контрастнее
-    "textMuted",    "707c8b",   ; подписи/мета — читаемо, но спокойно
+    "textDim",      "a5afbd",   ; вторичный текст
+    "textMuted",    "788494",   ; описания и мета
+    "textDisabled", "4f5967",   ; недоступные элементы
 
     ; ── Акцент (использовать экономно) ────────────────────────────────────────
     "accent",       "38bdf8",
@@ -67,9 +68,9 @@ global THEME := Map(
 
     ; ── Типографика ───────────────────────────────────────────────────────────
     "fontTitle",    14,         ; заголовок страницы
-    "fontSection",  10,         ; заголовок карточки
-    "fontBody",     9,
-    "fontMeta",     8,          ; label / caption (на 1px крупнее)
+    "fontSection",  11,         ; заголовок карточки
+    "fontBody",     10,         ; основной текст
+    "fontMeta",     9,          ; мелкие подписи (11–12px)
     "fontFamily",   "Segoe UI Variable Text",
     "fontFallback", "Segoe UI",
     "fontMono",     "Consolas",
@@ -139,10 +140,11 @@ global STATE := Map(
     "tempId", "",
     "overlayMode", "full",
     "lastSmsNum", "",
-    "lastAutoSave", ""
+    "lastAutoSave", "",
+    "nextAutoSave", 0
 )
 
-global STATS := Map("totalSent", 0, "patientsHealed", 0, "pillsGiven", 0, "injectionsGiven", 0, "operationsDone", 0, "medChecks", 0, "vaccinesGiven", 0, "sessionStart", A_Now)
+global STATS := Map("totalSent", 0, "patientsHealed", 0, "pillsGiven", 0, "injectionsGiven", 0, "operationsDone", 0, "medChecks", 0, "vaccinesGiven", 0, "saveCount", 0, "sessionStart", A_Now)
 
 global HoverButtons := [], SLOTS := [], UndoHistory := [], FILTERS := Map()
 global MainGui := "", OverlayGui := "", EditorGui := "", FilterMenuGui := "", FilterEditorGui := "", ContextMenuGui := ""
@@ -150,6 +152,7 @@ global g_BtnSaveProfile := "", g_BtnSaveSettings := "", g_BtnGlobalSave := ""
 ; Индикаторы единой системы состояний (● READY / ACTIVE / SAVED / WAITING / ERROR)
 global g_SystemStatus := "", g_ProfileStatus := "", g_PatientStatus := "", g_SaveStatus := ""
 global g_PatientGlow := "", g_KpiPatientDot := "", g_KpiSaveDot := ""
+global g_ToggleAutoSave := "", g_AutoSaveIntervalCtrl := "", g_AutoSaveStatusDot := ""
 global CurrentSearch := "", CurrentFilter := "", CurrentIdFormat := ""
 global OverlayVisible := false, ChatIsOpen := false
 global CapturedEditorKey := "", OverlayInputHook := ""

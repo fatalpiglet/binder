@@ -38,6 +38,15 @@ ApplyAndSaveSettings(*) {
     CFG["editorAutoSaveDelay"] := MainGui["SettingsEditorAutoSave"].Value = 1
     CFG["autoScreen"] := MainGui["SettingsAutoScreen"].Value = 1
     CFG["hotkeyWheel"] := MainGui["Value_Wheel"].Value
+
+    ; --- Автосохранение: переключатель + выбранный интервал ---
+    CFG["autoSave"] := MainGui["SettingsAutoSaveEnabled"].Value = 1
+    try {
+        intervals := AutoSaveIntervals()
+        idx := Integer(MainGui["SettingsAutoSaveInterval"].Value)
+        if (idx >= 1 && idx <= intervals.Length)
+            CFG["autoSaveInterval"] := intervals[idx]
+    }
     
     EditorConfirmDelete := MainGui["SettingsConfirmDelete"].Value = 1
     
@@ -48,6 +57,8 @@ ApplyAndSaveSettings(*) {
 
     ; === 3. ПРИМЕНЕНИЕ ===
     RegisterSystemHotkeys()
+    ; Новый интервал вступает в силу сразу, без перезапуска приложения
+    ApplyAutoSaveTimer()
     
     if OverlayGui && OverlayVisible
         WinSetTransparent(CFG["overlayOpacity"], OverlayGui)
@@ -141,6 +152,7 @@ SaveEverything() {
     ; 3. ФИНАЛ: СБРОС СОСТОЯНИЯ
     GlobalUnsavedChanges := false
     try UpdateSaveBar(false)
+    try RegisterSaveEvent(false)
     
     if g_BtnGlobalSave {
         ; Выключаем кнопку (делаем серой)
@@ -229,8 +241,16 @@ TrimBackups(dir) {
 AutoSaveTick() {
     global GlobalUnsavedChanges, STATE, CFG, MainGui
 
-    ; Выключено / нет изменений / идёт отправка / окно не создано
-    if !CFG["autoSave"] || !GlobalUnsavedChanges
+    ; Планируем следующее срабатывание (для строки «следующее через N сек»)
+    STATE["nextAutoSave"] := A_TickCount + Max(5, Integer(CFG["autoSaveInterval"])) * 1000
+    try UpdateAutoSaveInfoLine()
+
+    ; Выключено — таймер останавливаем совсем
+    if !CFG["autoSave"] {
+        try SetTimer(AutoSaveTick, 0)
+        return
+    }
+    if !GlobalUnsavedChanges
         return
     if STATE["isSending"]
         return
@@ -242,7 +262,7 @@ AutoSaveTick() {
         SaveCustomFilters()
         GlobalUnsavedChanges := false
         try UpdateSaveBar(false)
-        STATE["lastAutoSave"] := A_Now
+        try RegisterSaveEvent(true)
         TryRestoreButtonText()
         UpdateAutoSaveStatus()
         Log("Автосохранение выполнено", "INFO")
@@ -270,6 +290,7 @@ SaveGeneralSettings() {
         IniWrite(CFG["notifySms"] ? 1 : 0, CONFIG_FILE, "Settings", "notifySms")
         IniWrite(CFG["notifyKeywords"] ? 1 : 0, CONFIG_FILE, "Settings", "notifyKeywords")
         IniWrite(CFG["editorAutoSaveDelay"] ? 1 : 0, CONFIG_FILE, "Settings", "editorAutoSaveDelay")
+        IniWrite(STATS.Has("saveCount") ? STATS["saveCount"] : 0, CONFIG_FILE, "Stats", "saveCount")
         IniWrite(CFG["autoSave"] ? 1 : 0, CONFIG_FILE, "Settings", "autoSave")
         IniWrite(CFG["autoSaveInterval"], CONFIG_FILE, "Settings", "autoSaveInterval")
         
@@ -366,6 +387,7 @@ LoadConfig() {
         CFG["notifySms"] := IniRead(CONFIG_FILE, "Settings", "notifySms", 1) = 1
         CFG["notifyKeywords"] := IniRead(CONFIG_FILE, "Settings", "notifyKeywords", 0) = 1
         CFG["editorAutoSaveDelay"] := IniRead(CONFIG_FILE, "Settings", "editorAutoSaveDelay", 0) = 1
+        STATS["saveCount"] := Integer(IniRead(CONFIG_FILE, "Stats", "saveCount", 0))
         CFG["autoSave"] := IniRead(CONFIG_FILE, "Settings", "autoSave", 1) = 1
         CFG["autoSaveInterval"] := Integer(IniRead(CONFIG_FILE, "Settings", "autoSaveInterval", 60))
         

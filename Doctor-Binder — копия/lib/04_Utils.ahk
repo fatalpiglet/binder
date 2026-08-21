@@ -227,6 +227,15 @@ CheckSettingsDirty(*) {
         ; === [ИСПРАВЛЕНИЕ] Добавлена проверка авто-скриншотов ===
         if (MainGui["SettingsAutoScreen"].Value != (CFG["autoScreen"] ? 1 : 0))
             isDirty := true
+
+        ; --- Автосохранение: переключатель и интервал ---
+        if (MainGui["SettingsAutoSaveEnabled"].Value != (CFG["autoSave"] ? 1 : 0))
+            isDirty := true
+        if (Integer(MainGui["SettingsAutoSaveInterval"].Value) != AutoSaveIntervalIndex(CFG["autoSaveInterval"]))
+            isDirty := true
+
+        ; Статус автосохранения в интерфейсе всегда отражает выбранное состояние
+        try UpdateAutoSaveUI()
         
         UpdateButtonState(g_BtnSaveSettings, isDirty, "primary")
     }

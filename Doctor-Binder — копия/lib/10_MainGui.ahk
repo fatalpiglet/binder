@@ -10,6 +10,7 @@ BuildMainGui() {
     global g_BtnSaveProfile, g_BtnSaveSettings, g_BtnGlobalSave
     global g_SystemStatus, g_ProfileStatus, g_PatientStatus, g_SaveStatus, g_PatientGlow
     global g_KpiPatientDot, g_KpiSaveDot
+    global g_ToggleAutoSave, g_AutoSaveIntervalCtrl, g_AutoSaveStatusDot
     global GlobalUnsavedChanges, EditorConfirmDelete
     global SettingGroups := Map()
 
@@ -118,8 +119,11 @@ BuildMainGui() {
 
     MainGui.SetFont("s15 bold", THEME["fontFamily"])
     MainGui.AddText("x20 y104 w620 h28 c" THEME["textTitle"] " BackgroundTrans vDashGreeting", GetGreetingText())
+    MainGui.SetFont("s10 norm", THEME["fontFamily"])
+    MainGui.AddText("x21 y136 w520 h20 c" THEME["textDim"] " BackgroundTrans", "Рабочая область готова. Ниже — состояние смены.")
     MainGui.SetFont("s9 norm", THEME["fontFamily"])
-    MainGui.AddText("x21 y136 w620 h18 c" THEME["textDim"] " BackgroundTrans", "Рабочая область готова. Ниже — состояние смены.")
+    MainGui.AddText("x540 y137 w400 h18 Right c" THEME["textMuted"] " BackgroundTrans vAutoSaveInfo",
+        "Последнее сохранение: ещё не выполнялось")
 
     ; ─────────────────── Показатели смены (реальные данные) ───────────────────
     kpiY := 164
@@ -426,12 +430,13 @@ BuildMainGui() {
     ; --- ЛЕВОЕ МЕНЮ (НАВИГАЦИЯ) ---
     xMenu := 20
     wMenu := 190          ; подменю уже главного sidebar
-    hMenu := 440 ; Высота меню и контента
+    hMenu := 440 ; Высота меню и контента (6 пунктов подменю)
     
     ; Фон под меню (скруглённая панель)
     menuPanel := AddCardPanel(xMenu, yStart, wMenu, hMenu, 14, THEME["warning"])
     
     SettingGroups := Map()
+    SettingGroups["AutoSave"] := []
     SettingGroups["General"] := []
     SettingGroups["Notify"] := []
     SettingGroups["Timing"] := []
@@ -451,14 +456,15 @@ BuildMainGui() {
     }
 
     MenuBtns := []
-    MenuBtns.Push(CreateSideBtn(yStart, "Основные", "General"))
-    MenuBtns.Push(CreateSideBtn(yStart+50, "Уведомления", "Notify"))
-    MenuBtns.Push(CreateSideBtn(yStart+100, "Тайминги", "Timing"))
-    MenuBtns.Push(CreateSideBtn(yStart+150, "Клавиши", "Hotkeys"))
-    MenuBtns.Push(CreateSideBtn(yStart+200, "Скриншоты", "Screenshots"))
+    MenuBtns.Push(CreateSideBtn(yStart, "Автосохранение", "AutoSave"))
+    MenuBtns.Push(CreateSideBtn(yStart+50, "Поведение", "General"))
+    MenuBtns.Push(CreateSideBtn(yStart+100, "Уведомления", "Notify"))
+    MenuBtns.Push(CreateSideBtn(yStart+150, "Тайминги", "Timing"))
+    MenuBtns.Push(CreateSideBtn(yStart+200, "Клавиши", "Hotkeys"))
+    MenuBtns.Push(CreateSideBtn(yStart+250, "Скриншоты", "Screenshots"))
 
     ; Переменная для текущей вкладки (объявляем глобально для доступа внутри функции)
-    global CurrentSettingTab := "General"
+    global CurrentSettingTab := "AutoSave"
 
     SwitchSettingTab(tabName) {
         CurrentSettingTab := tabName
@@ -468,13 +474,13 @@ BuildMainGui() {
             if isActive {
                 ; Подраздел страницы: без cyan-рамки и свечения — этот приём
                 ; закреплён за главной навигацией слева.
-                btn.SetVisual(THEME["bgElevated"], THEME["accent"], THEME["bgElevated"], THEME["bgElevated"])
+                btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"])
                 btn.SetLayout("left", "›")
-                btn.ctrl.SetFont("s9 bold", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 bold", THEME["fontFamily"])
             } else {
                 btn.SetVisual(THEME["card"], THEME["textDim"], THEME["bgHover"], THEME["card"])
                 btn.SetLayout("left", "")
-                btn.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 norm", THEME["fontFamily"])
             }
             btn.ctrl.Redraw()
         }
@@ -518,89 +524,159 @@ BuildMainGui() {
         return btn
     }
     
-    ; ======================= 1. ОСНОВНЫЕ =======================
-    y := yStart + 20
+    ; ══════════════════════════════════════════════════════════════════════════
+    ; Компоненты страницы настроек: строка-карточка + переключатель
+    ; ══════════════════════════════════════════════════════════════════════════
+    rowX := xContent + 24
+    rowW := wContent - 48
+
+    ; Заголовок группы настроек
+    AddGroupTitle(group, gy, title, desc) {
+        t := MainGui.AddText("x" rowX " y" gy " w" (rowW - 20) " h24 BackgroundTrans c" THEME["textTitle"], title)
+        t.SetFont("s13 bold", THEME["fontFamily"])
+        AddToGroup(group, t)
+        d := MainGui.AddText("x" (rowX + 1) " y" (gy + 26) " w" (rowW - 20) " h18 BackgroundTrans c" THEME["textMuted"], desc)
+        d.SetFont("s10 norm", THEME["fontFamily"])
+        AddToGroup(group, d)
+    }
+
+    ; Строка-карточка: заголовок, описание и переключатель справа
+    AddToggleRow(group, ry, title, desc, name, checked, rh := 66) {
+        card := HoverCard(MainGui, rowX, ry, rowW, rh, THEME["radiusLg"])
+        AddToGroup(group, card)
+
+        MainGui.SetFont("s12 norm", THEME["fontFamily"])
+        tt := MainGui.AddText("x" (rowX + 20) " y" (ry + 13) " w" (rowW - 90) " h22 Background" card.surfaceColor
+            " c" THEME["text"], title)
+        card.Add(tt)
+        MainGui.SetFont("s10 norm", THEME["fontFamily"])
+        dd := MainGui.AddText("x" (rowX + 20) " y" (ry + 37) " w" (rowW - 90) " h18 Background" card.surfaceColor
+            " c" THEME["textMuted"], desc)
+        card.Add(dd)
+
+        tg := ToggleBox(MainGui, rowX + rowW - 50, ry + (rh - 20) // 2, name, checked,
+            (*) => CheckSettingsDirty(), THEME["bgElevated"])
+        tg.AttachLabel(tt)
+        AddToGroup(group, tg)
+        return tg
+    }
+
+    ; Строка-карточка без переключателя (под произвольные контролы)
+    AddSettingCard(group, ry, title, desc, rh := 66) {
+        card := HoverCard(MainGui, rowX, ry, rowW, rh, THEME["radiusLg"])
+        AddToGroup(group, card)
+        MainGui.SetFont("s12 norm", THEME["fontFamily"])
+        card.Add(MainGui.AddText("x" (rowX + 20) " y" (ry + 13) " w" (rowW - 240) " h22 Background" card.surfaceColor
+            " c" THEME["text"], title))
+        MainGui.SetFont("s10 norm", THEME["fontFamily"])
+        card.Add(MainGui.AddText("x" (rowX + 20) " y" (ry + 37) " w" (rowW - 240) " h18 Background" card.surfaceColor
+            " c" THEME["textMuted"], desc))
+        return card
+    }
+
+    ; ======================= 1. АВТОСОХРАНЕНИЕ =======================
+    y := yStart + 22
     x := xContent + 30
-    
-    ; ЗАГОЛОВОК И ОПИСАНИЕ
-    MainGui.SetFont("s12 bold", THEME["fontFamily"])
-    AddToGroup("General", MainGui.AddText("x" x " y" y " w400 c" THEME["textTitle"] " BackgroundTrans", "Основные параметры"))
-    MainGui.SetFont("s9", THEME["fontFamily"])
-    AddToGroup("General", MainGui.AddText("x" x " y" (y+30) " w580 c" THEME["textDim"] " BackgroundTrans", "Настройте базовое поведение биндера, клавишу активации чата и формат отображения ID пациентов."))
-    MainGui.SetFont("s10 norm", THEME["fontFamily"])
-    
-    y += 70
-    AddToGroup("General", MainGui.AddText("x" x " y" (y+3) " w150 c" THEME["textDim"] " BackgroundTrans", "Клавиша чата (F6/T):"))
+
+    AddGroupTitle("AutoSave", y, "Автосохранение",
+        "Изменения биндов и настроек сохраняются автоматически с выбранным интервалом.")
+
+    y := yStart + 82
+    g_ToggleAutoSave := AddToggleRow("AutoSave", y, "Автосохранение",
+        "Если выключено — сохранять изменения нужно вручную",
+        "SettingsAutoSaveEnabled", CFG["autoSave"])
+
+    ; Карточка выбора интервала
+    y += 76
+    intervalCard := AddSettingCard("AutoSave", y, "Интервал автосохранения",
+        "Как часто приложение сохраняет изменения", 118)
+
+    MainGui.SetFont("s11 norm", THEME["fontFamily"])
+    g_AutoSaveIntervalCtrl := MainGui.AddDropDownList("x" (rowX + 20) " y" (y + 66) " w220 r5 vSettingsAutoSaveInterval"
+        " Choose" AutoSaveIntervalIndex(CFG["autoSaveInterval"])
+        " Background" THEME["field"] " c" THEME["text"], AutoSaveIntervalLabels())
+    SetDarkControl(g_AutoSaveIntervalCtrl)
+    g_AutoSaveIntervalCtrl.OnEvent("Change", (*) => CheckSettingsDirty())
+    AddToGroup("AutoSave", g_AutoSaveIntervalCtrl)
+
+    g_AutoSaveStatusDot := StatusDot(MainGui, rowX + 262, y + 76, "Автосохранение включено", THEME["success"],
+        intervalCard.surfaceColor, 8, 260, 10)
+    AddToGroup("AutoSave", g_AutoSaveStatusDot)
+
+    y += 132
+    btnSaveAuto := CreateStyledButton(MainGui, rowX, y, 220, 36, "Сохранить изменения",
+        (*) => ApplyAndSaveSettings(), "primary", "Применить настройки автосохранения")
+    btnSaveAuto.SetBackdrop(THEME["card"])
+    AddToGroup("AutoSave", btnSaveAuto)
+
+    ; ======================= 2. ПОВЕДЕНИЕ =======================
+    y := yStart + 22
+
+    AddGroupTitle("General", y, "Поведение",
+        "Базовое поведение биндера: активация чата и формат ID пациента.")
+
+    y := yStart + 82
+    AddToggleRow("General", y, "Работать только при активном окне GTA",
+        "Бинды не срабатывают, когда игра свёрнута", "SettingsOnlyGTA", CFG["onlyGTA"])
+
+    ; Клавиша чата
+    y += 76
+    chatCard := AddSettingCard("General", y, "Клавиша открытия чата",
+        "Нажатие этой клавиши открывает игровой чат перед отправкой")
+
     val := CFG["chatKey"]
     disp := val = "" ? "—" : FormatHotkey(val)
-    hkChatBtn := CreateStyledButton(MainGui, x+160, y, 140, THEME["btnHSm"], disp, (*) => StartHotkeyCapture("ChatKey"), "default")
+    hkChatBtn := CreateStyledButton(MainGui, rowX + rowW - 194, y + 15, 130, 36, disp,
+        (*) => StartHotkeyCapture("ChatKey"), "default")
     hkChatBtn.ctrl.Name := "Display_ChatKey"
-    hkChatBtn.SetBackdrop(THEME["card"])
-    hkChatBtn.SetVisual(THEME["field"], val="" ? THEME["textMuted"] : THEME["accent"], THEME["bgHover"], THEME["fieldBorder"])
-    hkChatBtn.ctrl.SetFont("s9 bold", THEME["fontMono"])
-    hkChat := hkChatBtn.ctrl
+    hkChatBtn.SetBackdrop(chatCard.surfaceColor)
+    hkChatBtn.SetVisual(THEME["field"], val = "" ? THEME["textMuted"] : THEME["accent"], THEME["bgHover"], THEME["fieldBorder"])
+    hkChatBtn.ctrl.SetFont("s10 bold", THEME["fontMono"])
     AddToGroup("General", hkChatBtn)
-    MainGui.AddEdit("x0 y0 w0 h0 Hidden vValue_ChatKey", val) 
-    ; Делаем чуть меньше и квадратным (30x30)
-    btnCl := CreateClearBtn(MainGui, x+310, y, THEME["btnHSm"], (*) => ClearHotkey("ChatKey"))
-    btnCl.SetBackdrop(THEME["card"])
-    AddToGroup("General", btnCl) 
-    
-    y += 50
-    AddToGroup("General", MainGui.AddText("x" x " y" (y-5) " w400 c" THEME["textDim"] " BackgroundTrans", "Формат ID пациента (как вставлять в чат):"))
-    btnW := 100
-    btnH := 35
-    MainGui.SetFont("s9 bold", THEME["fontFamily"])
-    
+    MainGui.AddEdit("x0 y0 w0 h0 Hidden vValue_ChatKey", val)
+
+    btnCl := CreateClearBtn(MainGui, rowX + rowW - 56, y + 15, 36, (*) => ClearHotkey("ChatKey"))
+    btnCl.SetBackdrop(chatCard.surfaceColor)
+    AddToGroup("General", btnCl)
+
+    ; Формат ID пациента
+    y += 76
+    AddSettingCard("General", y, "Формат ID пациента",
+        "Как ID подставляется в сообщения вместо {P}", 118)
+
     global IdFormatButtons := Map()
-    b1 := CreateSegmentButton("BtnFmt_At", x, y+20, "@ID", (*) => SetIdFormatGUI("at"))
+    btnW := 100
+    b1 := CreateSegmentButton("BtnFmt_At", rowX + 20, y + 64, "@ID", (*) => SetIdFormatGUI("at"))
     IdFormatButtons["at"] := b1
     AddToGroup("General", b1)
 
-    b2 := CreateSegmentButton("BtnFmt_Quote", x+btnW+10, y+20, "`"ID`"", (*) => SetIdFormatGUI("quote"))
+    b2 := CreateSegmentButton("BtnFmt_Quote", rowX + 20 + btnW + 12, y + 64, "`"ID", (*) => SetIdFormatGUI("quote"))
     IdFormatButtons["quote"] := b2
     AddToGroup("General", b2)
 
-    b3 := CreateSegmentButton("BtnFmt_Plain", x+btnW*2+20, y+20, "ID", (*) => SetIdFormatGUI("plain"))
+    b3 := CreateSegmentButton("BtnFmt_Plain", rowX + 20 + (btnW + 12) * 2, y + 64, "ID", (*) => SetIdFormatGUI("plain"))
     IdFormatButtons["plain"] := b3
     AddToGroup("General", b3)
-    
-    y += 90
-    MainGui.SetFont("s10 norm", THEME["fontFamily"])
-    c1 := MainGui.AddCheckbox("x" x " y" y " vSettingsOnlyGTA c" THEME["text"] " Background" THEME["card"] " Checked" (CFG["onlyGTA"] ? 1 : 0), " Работа только при активном окне GTA")
-    AddToGroup("General", c1)
-    StyleCheckbox(c1)
-    c1.OnEvent("Click", (*) => CheckSettingsDirty())
-    
-    ; ======================= 2. УВЕДОМЛЕНИЯ =======================
-    y := yStart + 20
-    MainGui.SetFont("s12 bold", THEME["fontFamily"])
-    AddToGroup("Notify", MainGui.AddText("x" x " y" y " w400 c" THEME["textTitle"] " BackgroundTrans", "Система уведомлений"))
-    MainGui.SetFont("s9", THEME["fontFamily"])
-    AddToGroup("Notify", MainGui.AddText("x" x " y" (y+30) " w580 c" THEME["textDim"] " BackgroundTrans", "Управляйте звуковыми и визуальными оповещениями. Полезно, если игра свернута."))
-    MainGui.SetFont("s10 norm", THEME["fontFamily"])
-    
-    y += 70
-    c2 := MainGui.AddCheckbox("x" x " y" y " vSettingsNotifySms c" THEME["text"] " Background" THEME["card"] " Checked" (CFG["notifySms"] ? 1 : 0), " Всплывающее SMS (если игра свернута)")
-    AddToGroup("Notify", c2)
-    StyleCheckbox(c2)
-    c2.OnEvent("Click", (*) => CheckSettingsDirty())
-    y += 40
-    c3 := MainGui.AddCheckbox("x" x " y" y " vSettingsNotifyMention c" THEME["text"] " Background" THEME["card"] " Checked" (CFG["notifyMention"] ? 1 : 0), " Звук при упоминании вашего ника в чате")
-    AddToGroup("Notify", c3)
-    StyleCheckbox(c3)
-    c3.OnEvent("Click", (*) => CheckSettingsDirty())
-    y += 40
-    c4 := MainGui.AddCheckbox("x" x " y" y " vSettingsNotifyKeywords c" THEME["text"] " Background" THEME["card"] " Checked" (CFG["notifyKeywords"] ? 1 : 0), " Реагировать на просьбы (врач, лечи, таблетку)")
-    AddToGroup("Notify", c4)
-    StyleCheckbox(c4)
-    c4.OnEvent("Click", (*) => CheckSettingsDirty())
-    y += 40
-    c5 := MainGui.AddCheckbox("x" x " y" y " vSettingsConfirmDelete c" THEME["text"] " Background" THEME["card"] " Checked" (EditorConfirmDelete ? 1 : 0), " Спрашивать подтверждение при удалении строк")
-    AddToGroup("Notify", c5)
-    StyleCheckbox(c5)
-    c5.OnEvent("Click", (*) => CheckSettingsDirty())
-    
+
+    ; ======================= 3. УВЕДОМЛЕНИЯ =======================
+    y := yStart + 22
+
+    AddGroupTitle("Notify", y, "Уведомления",
+        "Звуковые и всплывающие оповещения — полезно, когда игра свёрнута.")
+
+    y := yStart + 82
+    AddToggleRow("Notify", y, "Всплывающее SMS",
+        "Показывать входящие SMS, когда игра свёрнута", "SettingsNotifySms", CFG["notifySms"])
+    y += 76
+    AddToggleRow("Notify", y, "Звук при упоминании",
+        "Сигнал, когда в чате упоминают ваш ник", "SettingsNotifyMention", CFG["notifyMention"])
+    y += 76
+    AddToggleRow("Notify", y, "Реагировать на просьбы",
+        "Отслеживать в чате слова «врач», «лечи», «таблетку»", "SettingsNotifyKeywords", CFG["notifyKeywords"])
+    y += 76
+    AddToggleRow("Notify", y, "Подтверждать удаление строк",
+        "Спрашивать подтверждение при удалении строки бинда", "SettingsConfirmDelete", EditorConfirmDelete)
+
     ; ======================= 3. ТАЙМИНГИ =======================
     y := yStart + 20
     MainGui.SetFont("s12 bold", THEME["fontFamily"])
@@ -642,13 +718,12 @@ BuildMainGui() {
     bSlow.SetBackdrop(THEME["card"])
     AddToGroup("Timing", bSlow)
     
-    y += 45
-    cAutoSave := MainGui.AddCheckbox("x" x " y" y " vSettingsEditorAutoSave c" THEME["text"] " Background" THEME["card"] " Checked" (CFG["editorAutoSaveDelay"] ? 1 : 0), " Авто-сохранение задержки в редакторе (без галочки)")
-    AddToGroup("Timing", cAutoSave)
-    StyleCheckbox(cAutoSave)
-    cAutoSave.OnEvent("Click", (*) => CheckSettingsDirty())
-    
-    y += 40 
+    y += 46
+    AddToggleRow("Timing", y, "Авто-сохранение задержки в редакторе",
+        "Новая задержка применяется сразу, без подтверждения галочкой",
+        "SettingsEditorAutoSave", CFG["editorAutoSaveDelay"], 62)
+
+    y += 74 
     AddToGroup("Timing", MainGui.AddText("x" x " y" y " w250 c" THEME["textDim"] " BackgroundTrans", "Прозрачность оверлея:"))
     slVal := MainGui.AddText("x" (x+300) " y" y " w100 Right c" THEME["accent"] " vOpacityDisplay BackgroundTrans", CFG["overlayOpacity"])
     AddToGroup("Timing", slVal)
@@ -760,13 +835,11 @@ BuildMainGui() {
     ; Описание
     AddToGroup("Screenshots", MainGui.AddText("x" x " y" y " w580 c" THEME["textDim"] " BackgroundTrans", "Биндер будет сам делать F8 при лечении и раскладывать скрины по папкам."))
     
-    y += 40
-    MainGui.SetFont("s11 bold", THEME["fontFamily"])
-    ; Чекбокс
-    cScr := MainGui.AddCheckbox("x" x " y" y " vSettingsAutoScreen c" THEME["success"] " Background" THEME["card"] " Checked" (CFG["autoScreen"] ? 1 : 0), " Включить авто-сортировку (Smart Sort)")
-    AddToGroup("Screenshots", cScr)
-    StyleCheckbox(cScr)
-    cScr.OnEvent("Click", (*) => CheckSettingsDirty())
+    y += 34
+    AddToggleRow("Screenshots", y, "Авто-сортировка скриншотов",
+        "Биндер сам нажимает F8 при лечении и раскладывает скрины по папкам",
+        "SettingsAutoScreen", CFG["autoScreen"], 62)
+    y += 22
     
     
     y += 40
@@ -834,7 +907,7 @@ BuildMainGui() {
     g_BtnSaveSettings.ctrl.SetFont("s8 bold", THEME["fontFamily"])
     UpdateButtonState(g_BtnSaveSettings, false)
     
-    SwitchSettingTab("General")
+    SwitchSettingTab("AutoSave")
 
 
     ; ==============================================================================
@@ -884,13 +957,13 @@ BuildMainGui() {
             if isActive {
                 ; Подраздел страницы: без cyan-рамки и свечения — этот приём
                 ; закреплён за главной навигацией слева.
-                btn.SetVisual(THEME["bgElevated"], THEME["accent"], THEME["bgElevated"], THEME["bgElevated"])
+                btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"])
                 btn.SetLayout("left", "›")
-                btn.ctrl.SetFont("s9 bold", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 bold", THEME["fontFamily"])
             } else {
                 btn.SetVisual(THEME["card"], THEME["textDim"], THEME["bgHover"], THEME["card"])
                 btn.SetLayout("left", "")
-                btn.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 norm", THEME["fontFamily"])
             }
             btn.ctrl.Redraw()
         }
@@ -959,34 +1032,54 @@ BuildMainGui() {
     CreateDashCard(x+(cw+gap)*2, y, cw, 100, "Активных биндов", "StatActiveBinds", "—", THEME["success"])
     
     
-    ; === 2. ИНФО ===
-    y := yStart + 30
-    x := xContent + 40
-    MainGui.SetFont("s12 bold", THEME["fontFamily"])
-    AddToStatGroup("Info", MainGui.AddText("x" x " y" y " w400 c" THEME["textTitle"] " BackgroundTrans", "Информация о сессии"))
-    
-    y += 60
-    MainGui.SetFont("s9 norm", THEME["fontFamily"])
-    AddToStatGroup("Info", MainGui.AddText("x" x " y" y " w200 c" THEME["textDim"] " BackgroundTrans", "Время запуска:"))
-    MainGui.SetFont("s13 bold", THEME["fontMono"])
-    AddToStatGroup("Info", MainGui.AddText("x" (x+200) " y" (y-5) " w300 c" THEME["text"] " BackgroundTrans", FormatTime(STATS["sessionStart"], "HH:mm:ss")))
-    
-    y += 50
-    MainGui.SetFont("s9 norm", THEME["fontFamily"])
-    AddToStatGroup("Info", MainGui.AddText("x" x " y" y " w200 c" THEME["textDim"] " BackgroundTrans", "Текущее время:"))
-    MainGui.SetFont("s13 bold", THEME["fontMono"])
-    ; Часы
-    clk := MainGui.AddText("x" (x+200) " y" (y-5) " w300 c" THEME["success"] " vRealTimeClock BackgroundTrans", FormatTime(A_Now, "HH:mm:ss"))
-    AddToStatGroup("Info", clk)
-    
-    y += 100
-    MainGui.SetFont("s10 italic", THEME["fontFamily"])
-    infoTxt := "Статистика автоматически сохраняется в файл конфигурации при каждом действии.`n`n" 
-             . "При перезапуске скрипта, если не было сброса, статистика продолжается.`n`n"
-             . "Используйте кнопку 'Сбросить всё' внизу для начала новой смены."
-    AddToStatGroup("Info", MainGui.AddText("x" x " y" y " w560 h100 c" THEME["textDim"], infoTxt))
-    
-    
+    ; === 2. ИНФОРМАЦИЯ О СЕССИИ (реальные данные приложения) ===
+    infoX := xContent + 24
+    infoW := wContent - 48
+    infoY := yStart + 20
+
+    infoCardObj := CreateCard(MainGui, infoX, infoY, infoW, 330)
+    AddToStatGroup("Info", infoCardObj.frame)
+    AddToStatGroup("Info", infoCardObj.surface)
+    AddToStatGroup("Info", infoCardObj.top)
+
+    MainGui.SetFont("s13 bold", THEME["fontFamily"])
+    AddToStatGroup("Info", MainGui.AddText("x" (infoX + 24) " y" (infoY + 20) " w400 h26 c" THEME["textTitle"]
+        " BackgroundTrans", "Информация о сессии"))
+
+    ; Строка «подпись — значение»
+    AddInfoRow(rowY, label, value, valueName := "", valueColor := "") {
+        if valueColor = ""
+            valueColor := THEME["text"]
+        MainGui.SetFont("s10 norm", THEME["fontFamily"])
+        AddToStatGroup("Info", MainGui.AddText("x" (infoX + 24) " y" (rowY + 2) " w300 h20 c" THEME["textDim"]
+            " BackgroundTrans", label))
+        MainGui.SetFont("s12 bold", THEME["fontMono"])
+        vopt := valueName != "" ? " v" valueName : ""
+        AddToStatGroup("Info", MainGui.AddText("x" (infoX + infoW - 260) " y" rowY " w236 h22 Right c" valueColor
+            " BackgroundTrans" vopt, value))
+    }
+
+    CountBinds(&statTotalBinds, &statActiveBinds)
+    doneActions := STATS["patientsHealed"] + STATS["pillsGiven"] + STATS["injectionsGiven"]
+        + STATS["operationsDone"] + STATS["medChecks"] + STATS["vaccinesGiven"]
+
+    AddInfoRow(infoY + 62,  "Время запуска", FormatTime(STATS["sessionStart"], "HH:mm:ss"))
+    AddInfoRow(infoY + 92,  "Текущее время", FormatTime(A_Now, "HH:mm:ss"), "RealTimeClock", THEME["accent"])
+    AddInfoRow(infoY + 122, "Длительность сессии", "00:00:00", "InfoDuration")
+    AddInfoRow(infoY + 152, "Отправлено строк", STATS["totalSent"], "InfoSent")
+    AddInfoRow(infoY + 182, "Активных биндов", statActiveBinds, "InfoBinds")
+    AddInfoRow(infoY + 212, "Выполнено действий", doneActions, "InfoActions")
+    AddInfoRow(infoY + 242, "Сохранений за сессию", STATS.Has("saveCount") ? STATS["saveCount"] : 0, "InfoSaves")
+
+    AddToStatGroup("Info", MainGui.AddText("x" (infoX + 24) " y" (infoY + 276) " w" (infoW - 48) " h1 Background"
+        THEME["cardBorder"], ""))
+
+    MainGui.SetFont("s10 norm", THEME["fontFamily"])
+    AddToStatGroup("Info", MainGui.AddText("x" (infoX + 24) " y" (infoY + 292) " w" (infoW - 48) " h34 c"
+        THEME["textMuted"] " BackgroundTrans",
+        "Статистика сохраняется автоматически при выполнении действий и продолжается после перезапуска."))
+
+
     ; --- КНОПКИ ВНИЗУ ---
     y := 675
     MainGui.AddText("x20 y" y " w920 h1 Background" THEME["border"], "")
@@ -1045,13 +1138,13 @@ BuildMainGui() {
             if isActive {
                 ; Подраздел страницы: без cyan-рамки и свечения — этот приём
                 ; закреплён за главной навигацией слева.
-                btn.SetVisual(THEME["bgElevated"], THEME["accent"], THEME["bgElevated"], THEME["bgElevated"])
+                btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"])
                 btn.SetLayout("left", "›")
-                btn.ctrl.SetFont("s9 bold", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 bold", THEME["fontFamily"])
             } else {
                 btn.SetVisual(THEME["card"], THEME["textDim"], THEME["bgHover"], THEME["card"])
                 btn.SetLayout("left", "")
-                btn.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+                btn.ctrl.SetFont("s10 norm", THEME["fontFamily"])
             }
             btn.ctrl.Redraw()
         }
@@ -1118,11 +1211,11 @@ BuildMainGui() {
         "{SPECIALTY}  Должность"
     ]
     for tag in tags {
-        t := AddToHelp("Syntax", MainGui.AddText("x" x " y" y " w350 h20 c" THEME["accentLight"], tag))
+        t := AddToHelp("Syntax", MainGui.AddText("x" x " y" y " w350 h20 c" THEME["accentLight"] " BackgroundTrans", tag))
         y += 30
     }
     y += 20
-    MainGui.SetFont("s9 italic", THEME["fontFamily"])
+    MainGui.SetFont("s10 norm", THEME["fontFamily"])
     AddToHelp("Syntax", MainGui.AddText("x" x " y" y " w350 c" THEME["textDim"] " BackgroundTrans", "Пример: Привет, я {MY}. Что болит, {P}?"))
     
     ; === 3. О ПРОГРАММЕ ===
@@ -1138,9 +1231,9 @@ BuildMainGui() {
     AddToHelp("About", logo)
     
     MainGui.SetFont("s16 bold", THEME["fontFamily"])
-    AddToHelp("About", MainGui.AddText("x" (x+66) " y" (y+6) " w280 c" THEME["textTitle"] " BackgroundTrans", "DOCTOR BINDER"))
+    AddToHelp("About", MainGui.AddText("x" (x+66) " y" (y+6) " w280 c" THEME["textTitle"] " BackgroundTrans", "Doctor Binder"))
     MainGui.SetFont("s8", THEME["fontFamily"])
-    AddToHelp("About", MainGui.AddText("x" (x+67) " y" (y+34) " w280 c" THEME["textMuted"] " BackgroundTrans", "MEDICAL OPERATIONS CONSOLE  ·  v" VERSION "  ·  " AUTHOR))
+    AddToHelp("About", MainGui.AddText("x" (x+67) " y" (y+34) " w280 c" THEME["textMuted"] " BackgroundTrans", "Медицинская консоль  ·  v" VERSION "  ·  " AUTHOR))
     
     y += 78
     sepAbout := MainGui.AddText("x" x " y" y " w350 h1 Background" THEME["cardBorder"], "")
@@ -1153,7 +1246,7 @@ BuildMainGui() {
     y += 28
     AddToHelp("About", MainGui.AddText("x" x " y" y " w350 c" THEME["textDim"] " BackgroundTrans", "Год: 2026"))
     y += 40
-    MainGui.SetFont("s9 italic", THEME["fontFamily"])
+    MainGui.SetFont("s10 norm", THEME["fontFamily"])
     AddToHelp("About", MainGui.AddText("x" x " y" y " w350 h100 c" THEME["textDim"] " BackgroundTrans", "Разработано специально для медицинского сообщества SAMP ABS RP"))
     
     
@@ -1398,12 +1491,17 @@ RefreshMainGui() {
         MainGui["SettingsNotifyMention"].Value := CFG["notifyMention"] ? 1 : 0
         MainGui["SettingsNotifyKeywords"].Value := CFG["notifyKeywords"] ? 1 : 0
         
+        MainGui["SettingsAutoSaveEnabled"].Value := CFG["autoSave"] ? 1 : 0
+        MainGui["SettingsAutoSaveInterval"].Value := AutoSaveIntervalIndex(CFG["autoSaveInterval"])
+        ToggleBox.SyncAll()
+
         ; --- ИНИЦИАЛИЗАЦИЯ КНОПОК ID ---
         SetIdFormatGUI(CFG["patientFormat"])
         ; -------------------------------
         
         UpdateStatsDisplay()
         UpdateAutoSaveStatus()
+        UpdateAutoSaveUI()
         UpdateDashboardCards()
         UpdateProfileStatus(false)
         UpdateSaveBar(GlobalUnsavedChanges)
@@ -1431,6 +1529,34 @@ UpdateStatsDisplay() {
         MainGui["StatVaccines"].Text := STATS["vaccinesGiven"]
     }
     try MainGui["KpiSent"].Text := STATS["totalSent"]
+    UpdateSessionInfo()
+}
+
+; Обновляет карточку «Информация о сессии» (только реальные данные)
+UpdateSessionInfo() {
+    global MainGui, STATS
+
+    if !MainGui
+        return
+
+    try {
+        seconds := DateDiff(A_Now, STATS["sessionStart"], "Seconds")
+        if (seconds < 0)
+            seconds := 0
+        hh := Format("{:02}", seconds // 3600)
+        mm := Format("{:02}", Mod(seconds // 60, 60))
+        ss := Format("{:02}", Mod(seconds, 60))
+        MainGui["InfoDuration"].Text := hh ":" mm ":" ss
+    }
+
+    try {
+        CountBinds(&total, &active)
+        MainGui["InfoBinds"].Text := active
+        MainGui["InfoSent"].Text := STATS["totalSent"]
+        MainGui["InfoActions"].Text := STATS["patientsHealed"] + STATS["pillsGiven"] + STATS["injectionsGiven"]
+            + STATS["operationsDone"] + STATS["medChecks"] + STATS["vaccinesGiven"]
+        MainGui["InfoSaves"].Text := STATS.Has("saveCount") ? STATS["saveCount"] : 0
+    }
 }
 
 ; ═══════════════════════════════════════════════════════════════════════════════
@@ -1464,6 +1590,7 @@ ResetStats(*) {
         STATS["operationsDone"] := 0
         STATS["medChecks"] := 0
         STATS["vaccinesGiven"] := 0
+        STATS["saveCount"] := 0
         STATS["sessionStart"] := A_Now
         
         UpdateStatsDisplay()
@@ -1558,6 +1685,144 @@ MainClearPatient(*) {
 }
 
 ; ══════════════════════════════════════════════════════════════════════════════
+;  АВТОСОХРАНЕНИЕ: единый источник данных для «Настроек» и «Обзора»
+; ══════════════════════════════════════════════════════════════════════════════
+AutoSaveIntervals() {
+    return [10, 30, 60, 300, 600]
+}
+
+AutoSaveIntervalLabels() {
+    return ["10 секунд", "30 секунд", "60 секунд", "5 минут", "10 минут"]
+}
+
+AutoSaveIntervalIndex(seconds) {
+    for i, v in AutoSaveIntervals() {
+        if (v = Integer(seconds))
+            return i
+    }
+    return 3    ; по умолчанию — 60 секунд
+}
+
+AutoSaveIntervalText(seconds) {
+    seconds := Integer(seconds)
+    if (seconds >= 60)
+        return (seconds // 60) " мин"
+    return seconds " сек"
+}
+
+; Перезапускает таймер автосохранения по текущим настройкам.
+; Вызывается при старте и сразу после сохранения настроек — перезапуск
+; приложения не требуется.
+ApplyAutoSaveTimer() {
+    global CFG, STATE
+
+    try SetTimer(AutoSaveTick, 0)
+
+    if !CFG["autoSave"] {
+        STATE["nextAutoSave"] := 0
+        UpdateAutoSaveUI()
+        return
+    }
+
+    interval := Max(5, Integer(CFG["autoSaveInterval"]))
+    SetTimer(AutoSaveTick, interval * 1000)
+    STATE["nextAutoSave"] := A_TickCount + interval * 1000
+    UpdateAutoSaveUI()
+}
+
+; Синхронизирует все места, где показано состояние автосохранения.
+UpdateAutoSaveUI() {
+    global MainGui, CFG, THEME, g_AutoSaveStatusDot, g_AutoSaveIntervalCtrl, g_ToggleAutoSave
+    static lastKey := ""
+
+    if !MainGui
+        return
+
+    ; Перерисовываем только при реальной смене состояния (без мерцания)
+    enabledNow := CFG["autoSave"] ? 1 : 0
+    try enabledNow := MainGui["SettingsAutoSaveEnabled"].Value ? 1 : 0
+    key := enabledNow "|" CFG["autoSave"] "|" CFG["autoSaveInterval"]
+    if (key = lastKey)
+        return
+    lastKey := key
+
+    ; Настройки: статус и доступность выбора интервала
+    try {
+        if IsObject(g_AutoSaveStatusDot) {
+            if CFG["autoSave"]
+                g_AutoSaveStatusDot.Set("Автосохранение включено · интервал " AutoSaveIntervalText(CFG["autoSaveInterval"]),
+                    THEME["success"])
+            else
+                g_AutoSaveStatusDot.Set("Автосохранение выключено", THEME["textDisabled"])
+        }
+    }
+    try {
+        enabled := MainGui["SettingsAutoSaveEnabled"].Value ? true : false
+        if IsObject(g_AutoSaveIntervalCtrl) {
+            g_AutoSaveIntervalCtrl.Enabled := enabled
+            g_AutoSaveIntervalCtrl.Opt("c" (enabled ? THEME["text"] : THEME["textDisabled"]))
+            g_AutoSaveIntervalCtrl.Redraw()
+        }
+    }
+
+    UpdateAutoSaveStatus()
+    UpdateDashboardCards()
+    UpdateAutoSaveInfoLine()
+}
+
+; Небольшая строка на «Обзоре»: когда сохраняли и когда сохраним дальше.
+UpdateAutoSaveInfoLine() {
+    global MainGui, CFG, STATE
+
+    if !MainGui
+        return
+
+    try {
+        if STATE["lastAutoSave"] != "" {
+            diff := DateDiff(A_Now, STATE["lastAutoSave"], "Seconds")
+            if (diff < 10)
+                line := "Последнее сохранение: только что"
+            else if (diff < 60)
+                line := "Последнее сохранение: " diff " сек назад"
+            else
+                line := "Последнее сохранение: в " FormatTime(STATE["lastAutoSave"], "HH:mm")
+        } else {
+            line := "Последнее сохранение: ещё не выполнялось"
+        }
+
+        if (CFG["autoSave"] && STATE["nextAutoSave"] > 0) {
+            left := Round((STATE["nextAutoSave"] - A_TickCount) / 1000)
+            if (left < 0)
+                left := 0
+            line .= "   ·   следующее через " left " сек"
+        } else if !CFG["autoSave"] {
+            line .= "   ·   автосохранение отключено"
+        }
+
+        MainGui["AutoSaveInfo"].Text := line
+    }
+}
+
+; Отмечает факт сохранения (ручного или автоматического).
+RegisterSaveEvent(isAuto := false) {
+    global STATE, STATS, CFG
+
+    STATE["lastAutoSave"] := A_Now
+    if STATS.Has("saveCount")
+        STATS["saveCount"]++
+    else
+        STATS["saveCount"] := 1
+
+    if (CFG["autoSave"] && isAuto)
+        STATE["nextAutoSave"] := A_TickCount + Max(5, Integer(CFG["autoSaveInterval"])) * 1000
+
+    UpdateAutoSaveStatus()
+    UpdateDashboardCards()
+    UpdateAutoSaveInfoLine()
+    UpdateSessionInfo()
+}
+
+; ══════════════════════════════════════════════════════════════════════════════
 ;  ДАННЫЕ РАБОЧЕГО СТОЛА
 ; ══════════════════════════════════════════════════════════════════════════════
 
@@ -1627,9 +1892,9 @@ UpdateDashboardCards() {
         MainGui["KpiSave"].Opt("c" (CFG["autoSave"] ? THEME["success"] : THEME["textMuted"]))
         MainGui["KpiSave"].Redraw()
         if IsObject(g_KpiSaveDot)
-            g_KpiSaveDot.Set(STATE["lastAutoSave"] != ""
-                ? "последнее в " FormatTime(STATE["lastAutoSave"], "HH:mm")
-                : "интервал " CFG["autoSaveInterval"] " сек",
+            g_KpiSaveDot.Set(CFG["autoSave"]
+                ? "интервал: " AutoSaveIntervalText(CFG["autoSaveInterval"])
+                : "автосохранение отключено",
                 CFG["autoSave"] ? THEME["success"] : THEME["textMuted"])
     }
 
@@ -1771,11 +2036,11 @@ UpdateAutoSaveStatus() {
 
 UpdateAppClock() {
     global MainGui
-    try {
-        if MainGui {
-            MainGui["RealTimeClock"].Text := FormatTime(A_Now, "HH:mm:ss")
-        }
-    }
+    if !MainGui
+        return
+    try MainGui["RealTimeClock"].Text := FormatTime(A_Now, "HH:mm:ss")
+    UpdateAutoSaveInfoLine()
+    UpdateSessionInfo()
 }
 
 ; ═══════════════════════════════════════════════════════════════════════════════

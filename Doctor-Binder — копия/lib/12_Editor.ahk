@@ -99,8 +99,10 @@ OpenBindEditor(slotNum) {
     EditorGui["EditorStatTypeVisible"].OnEvent("Change", (*) => SyncStatTypeFromVisible())
     xIn += 140
 
-    EditorGui.SetFont("s9 norm", THEME["fontFamily"])
-    StyleCheckbox(EditorGui.AddCheckbox("x" xIn " y" (yRow+7) " w100 vEditorEnabled c" THEME["text"] " Checked" (slot["enabled"] ? 1 : 0) " Background" THEME["card"], " Активен"))
+    EditorGui.SetFont("s10 norm", THEME["fontFamily"])
+    tgEnabled := ToggleBox(EditorGui, xIn, yRow + 7, "EditorEnabled", slot["enabled"], "", THEME["card"])
+    lblEnabled := EditorGui.AddText("x" (xIn + 30) " y" (yRow + 8) " w90 h20 BackgroundTrans c" THEME["text"], "Активен")
+    tgEnabled.AttachLabel(lblEnabled)
 
     ; --- ОСНОВНАЯ ОБЛАСТЬ ---
     yMain := yInfo + cardH + 16

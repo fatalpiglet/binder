@@ -39,8 +39,8 @@ ShowNotify(text, type := "info", duration := 2000) {
     ; Маленькая статус-точка вместо широкой цветной полосы
     dot := NotifyGui.AddText("x16 y22 w7 h7 Background" color, "")
     RoundCorners(dot, 7, 7, 4)
-    NotifyGui.SetFont("s9 norm", THEME["fontFamily"])
-    NotifyGui.AddText("x34 y16 w270 h20 c" THEME["textBody"] " BackgroundTrans", text)
+    NotifyGui.SetFont("s10 norm", THEME["fontFamily"])
+    NotifyGui.AddText("x34 y15 w270 h22 c" THEME["textBody"] " BackgroundTrans", text)
 
     NotifyBaseX := A_ScreenWidth - 340
     NotifyBaseY := A_ScreenHeight - 110

@@ -242,12 +242,12 @@ ShowMentionNotification(chatLine) {
     
     MentionNotifyGui.AddText("x0 y0 w6 h" h " Background" THEME["warning"], "")
     
-    MentionNotifyGui.SetFont("s9 bold", "Segoe UI")
+    MentionNotifyGui.SetFont("s9 bold", THEME["fontFamily"])
     MentionNotifyGui.AddText("x25 y12 w200 c" THEME["warning"] " BackgroundTrans", "Вас упомянули")
     
     ; Сам текст сообщения
-    MentionNotifyGui.SetFont("s10", "Segoe UI")
-    MentionNotifyGui.AddText("x25 y40 w300 h50 c" THEME["text"], cleanLine)
+    MentionNotifyGui.SetFont("s10", THEME["fontFamily"])
+    MentionNotifyGui.AddText("x25 y40 w300 h50 c" THEME["text"] " BackgroundTrans", cleanLine)
     
     x := A_ScreenWidth - w - 20
     y := A_ScreenHeight - h - 60
@@ -326,13 +326,13 @@ ShowSmsNotification(smsNumber) {
     
     SmsNotifyGui.AddText("x0 y0 w6 h" h " Background" THEME["accent"], "")
     
-    SmsNotifyGui.SetFont("s9 bold", "Segoe UI")
+    SmsNotifyGui.SetFont("s9 bold", THEME["fontFamily"])
     SmsNotifyGui.AddText("x25 y12 w200 c" THEME["textDim"] " BackgroundTrans", "Входящее СМС")
     
     SmsNotifyGui.SetFont("s18 bold", "Consolas")
-    SmsNotifyGui.AddText("x25 y35 w280 c" THEME["text"], smsNumber)
+    SmsNotifyGui.AddText("x25 y35 w280 c" THEME["text"] " BackgroundTrans", smsNumber)
     
-    SmsNotifyGui.SetFont("s9", "Segoe UI")
+    SmsNotifyGui.SetFont("s9", THEME["fontFamily"])
     ; ✅ ИЗМЕНЕННЫЙ ТЕКСТ
     SmsNotifyGui.AddText("x25 y70 w280 c" THEME["success"] " BackgroundTrans", "В игре: нажми [F4] для ответа")
     
