@@ -449,11 +449,14 @@ class InputField {
 
         r := THEME["radiusSm"]
 
-        ; Кольцо мягкого cyan-свечения (видно только в фокусе).
+        ; Кольцо мягкого cyan-свечения. В покое оно окрашено в цвет подложки
+        ; (то есть невидимо) — так надёжнее, чем прятать контрол: переключение
+        ; вкладок в AHK может заново показать скрытые контролы страницы.
+        this.glowOff := this.backdrop
+        this.glowOn := BlendHex(this.backdrop, THEME["accent"], 0.16)
         this.glowRing := parent.AddText("x" (x - 2) " y" (y - 2) " w" (w + 4) " h" (h + 4)
-            " Background" BlendHex(this.backdrop, THEME["accent"], 0.16), "")
+            " Background" this.glowOff, "")
         RoundCorners(this.glowRing, w + 4, h + 4, r + 2)
-        try this.glowRing.Visible := false
 
         ; Рамка (1px) — цвет меняется на hover/focus.
         this.frame := parent.AddText("x" x " y" y " w" w " h" h " Background" THEME["fieldBorder"], "")
@@ -513,7 +516,10 @@ class InputField {
             this.frame.Opt("Background" color)
             this.frame.Redraw()
         }
-        try this.glowRing.Visible := (this.visible && this.focused)
+        try {
+            this.glowRing.Opt("Background" (this.focused ? this.glowOn : this.glowOff))
+            this.glowRing.Redraw()
+        }
     }
 
     SetVisible(state) {
@@ -521,7 +527,7 @@ class InputField {
         try this.frame.Visible := state
         try this.inner.Visible := state
         try this.ctrl.Visible := state
-        try this.glowRing.Visible := (state && this.focused)
+        try this.glowRing.Visible := state
     }
 
     SetEnabled(state) {
