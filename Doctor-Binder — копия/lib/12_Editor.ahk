@@ -143,8 +143,9 @@ OpenBindEditor(slotNum) {
     EditorGui.AddText("x" xRight " y" yMain " w200 h18 c" THEME["text"] " BackgroundTrans", "РЕДАКТИРОВАНИЕ")
     EditorGui.SetFont("s8 norm", THEME["fontFamily"])
     EditorGui.AddText("x" (xRight+rightW-150) " y" (yMain+2) " w150 Right c" THEME["textMuted"] " BackgroundTrans vEditorRowLabel", "Строка не выбрана")
+    EditorGui.AddText("x" xRight " y" (yMain + 24) " w" rightW " h1 Background" THEME["cardBorder"], "")
 
-    yTags := yMain + 28
+    yTags := yMain + 36
     EditorGui.SetFont("s8 bold", THEME["fontFamily"])
     EditorGui.AddText("x" xRight " y" yTags " w200 h14 c" THEME["textMuted"] " BackgroundTrans", "БЫСТРЫЕ ВСТАВКИ")
     yTags += 18
@@ -153,7 +154,8 @@ OpenBindEditor(slotNum) {
     EditorChip(EditorGui, xRight+122, yTags, 68, 26, "{HOSP}", (*) => EditorInsertTag("{HOSPITAL}"))
     EditorChip(EditorGui, xRight+196, yTags, 68, 26, "{SPEC}", (*) => EditorInsertTag("{SPECIALTY}"))
 
-    yCmds := yTags + 36
+    yCmds := yTags + 32
+    EditorGui.AddText("x" xRight " y" (yCmds - 8) " w" rightW " h1 Background" THEME["cardBorder"], "")
     EditorGui.SetFont("s8 bold", THEME["fontFamily"])
     EditorGui.AddText("x" xRight " y" yCmds " w200 h14 c" THEME["textMuted"] " BackgroundTrans", "КОМАНДЫ")
     yCmds += 18
@@ -162,7 +164,8 @@ OpenBindEditor(slotNum) {
     EditorChip(EditorGui, xRight+108, yCmds, 48, 26, "/де", (*) => EditorInsertTag("/де "))
     EditorChip(EditorGui, xRight+162, yCmds, 72, 26, "/шепот", (*) => EditorInsertTag("/шепот "))
 
-    yEdit := yCmds + 40
+    yEdit := yCmds + 36
+    EditorGui.AddText("x" xRight " y" (yEdit - 8) " w" rightW " h1 Background" THEME["cardBorder"], "")
     EditorGui.SetFont("s8 bold", THEME["fontFamily"])
     EditorGui.AddText("x" xRight " y" yEdit " w200 h14 c" THEME["textMuted"] " BackgroundTrans", "ТЕКСТ СТРОКИ")
     yEdit += 18
@@ -172,7 +175,8 @@ OpenBindEditor(slotNum) {
     SetDarkControl(EditorEditBox)
     EditorEditBox.OnEvent("Change", EditorSyncText)
 
-    yDelay := yEdit + hEdit + 12
+    yDelay := yEdit + hEdit + 16
+    EditorGui.AddText("x" xRight " y" (yDelay - 8) " w" rightW " h1 Background" THEME["cardBorder"], "")
     EditorGui.SetFont("s8 bold", THEME["fontFamily"])
     EditorGui.AddText("x" xRight " y" yDelay " w220 h14 c" THEME["textMuted"] " BackgroundTrans", "ЗАДЕРЖКА ОТПРАВКИ")
     yDelay += 18
@@ -192,7 +196,8 @@ OpenBindEditor(slotNum) {
     yApply := yDelay + 40
     EditorChip(EditorGui, xRight, yApply, 220, 30, "Применить ко всем строкам", (*) => EditorApplyDelayToAll())
 
-    yPreview := yApply + 40
+    yPreview := yApply + 36
+    EditorGui.AddText("x" xRight " y" (yPreview - 8) " w" rightW " h1 Background" THEME["cardBorder"], "")
     EditorGui.SetFont("s8 bold", THEME["fontFamily"])
     EditorGui.AddText("x" xRight " y" yPreview " w200 h14 c" THEME["textMuted"] " BackgroundTrans", "ПРЕДПРОСМОТР")
     yPreview += 18

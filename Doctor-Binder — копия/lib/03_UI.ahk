@@ -184,7 +184,7 @@ class StyledBtn {
     SetVisible(visible) {
         if !visible && this.isHovered
             this.SetHover(false)
-        try this.ctrl.Visible := visible
+        ParkGuiCtrl(this.ctrl, !visible)
     }
 
     SetHover(state) {
@@ -583,10 +583,10 @@ class InputField {
 
     SetVisible(state) {
         this.visible := state
-        try this.frame.Visible := state
-        try this.inner.Visible := state
-        try this.ctrl.Visible := state
-        try this.glowRing.Visible := state
+        ParkGuiCtrl(this.glowRing, !state)
+        ParkGuiCtrl(this.frame, !state)
+        ParkGuiCtrl(this.inner, !state)
+        ParkGuiCtrl(this.ctrl, !state)
     }
 
     SetEnabled(state) {
@@ -782,9 +782,9 @@ class ToggleBox {
     }
 
     SetVisible(state) {
-        try this.glow.Visible := state
-        try this.frame.Visible := state
-        try this.box.Visible := state
+        ParkGuiCtrl(this.glow, !state)
+        ParkGuiCtrl(this.frame, !state)
+        ParkGuiCtrl(this.box, !state)
     }
 
     ; Обновить все переключатели после программного изменения значений
@@ -900,18 +900,29 @@ class DarkSelect {
         try RoundCorners(pop, w, h, 8)
         pop.OnEvent("Close", (*) => this.Close())
         pop.OnEvent("Escape", (*) => this.Close())
-        SetTimer(() => this.WatchOutside(), 80)
+        this.menuArmed := false
+        SetTimer(() => this.WatchOutside(), 40)
     }
 
     WatchOutside() {
         if !DarkSelect.OpenGui
             return
-        if !GetKeyState("LButton", "P")
+        down := GetKeyState("LButton", "P")
+        if !this.menuArmed {
+            if !down
+                this.menuArmed := true
+            return
+        }
+        if !down
             return
         try {
             MouseGetPos(, , &win)
-            if (win != DarkSelect.OpenGui.Hwnd)
-                this.Close()
+            popHwnd := DarkSelect.OpenGui.Hwnd
+            if (win = popHwnd)
+                return
+            if DllCall("user32\IsChild", "Ptr", popHwnd, "Ptr", win)
+                return
+            this.Close()
         }
     }
 
@@ -1556,4 +1567,6 @@ StyleCheckbox(ctrl) {
 
 ; ══════════════════════════════════════════════════════════════════════════
 ; СИСТЕМА РАДИАЛЬНОГО МЕНЮ (WHEEL MENU) - ИСПРАВЛЕННАЯ
+; ══════════════════════════════════════════════════════════════════════════
+�ОГО МЕНЮ (WHEEL MENU) - ИСПРАВЛЕННАЯ
 ; ══════════════════════════════════════════════════════════════════════════

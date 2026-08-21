@@ -64,10 +64,7 @@ BuildMainGui() {
     MainGui.AddText("x62 y15 w360 h26 c" THEME["textTitle"] " BackgroundTrans", "Doctor Binder")
 
     ; Состояние системы — маленькая точка с очень мягким зелёным свечением
-    g_SystemStatus := StatusDot(MainGui, WIN_W - 300, 14, "Система готова", THEME["success"], THEME["surface"], 8, 170, 9)
-    MainGui.SetFont("s8 norm", THEME["fontFamily"])
-    MainGui.AddText("x" (WIN_W - 282) " y33 w170 h15 c" THEME["textMuted"] " BackgroundTrans vAutoSaveStatus",
-        (CFG["autoSave"] ? "АВТОСОХРАНЕНИЕ ВКЛ" : "АВТОСОХРАНЕНИЕ ВЫКЛ"))
+    g_SystemStatus := StatusDot(MainGui, WIN_W - 220, 20, "Система готова", THEME["success"], THEME["surface"], 8, 160, 9)
 
     CloseBtn := CreateStyledButton(MainGui, WIN_W - 48, 12, 32, 32, "×", (*) => CloseApplication(), "icon",
         "Закрыть приложение")
@@ -483,22 +480,27 @@ BuildMainGui() {
             btn.ctrl.Redraw()
         }
         
-        ; Скрываем/показываем группы
+        try {
+            if DarkSelect.OpenGui
+                DarkSelect.OpenGui.Destroy()
+            DarkSelect.OpenGui := ""
+        }
         for name, ctrls in SettingGroups {
             for ctrl in ctrls {
                 if IsObject(ctrl) && ctrl.HasMethod("SetVisible")
                     ctrl.SetVisible(false)
                 else
-                    try ctrl.Visible := false
+                    ParkGuiCtrl(ctrl, true)
             }
         }
         for ctrl in SettingGroups[tabName] {
             if IsObject(ctrl) && ctrl.HasMethod("SetVisible")
                 ctrl.SetVisible(true)
             else
-                try ctrl.Visible := true
+                ParkGuiCtrl(ctrl, false)
         }
-        ; Не перерисовываем всё окно принудительно — это вызывает мерцание.
+        try DllCall("user32\InvalidateRect", "Ptr", MainGui.Hwnd, "Ptr", 0, "Int", true)
+        try DllCall("user32\UpdateWindow", "Ptr", MainGui.Hwnd)
     }
     
     
@@ -558,24 +560,25 @@ BuildMainGui() {
     y := yStart + 18
     x := xContent + 24
 
-    AddGroupTitle("AutoSave", y, "Автосохранение")
+    AddGroupTitle("AutoSave", y, "Автосохранение",
+        "Изменения сохраняются автоматически через выбранный интервал.")
 
-    y := yStart + 58
+    y := yStart + 72
     labInt := MainGui.AddText("x" rowX " y" y " w120 h16 BackgroundTrans c" THEME["textDim"], "Интервал")
     labInt.SetFont("s8 bold", THEME["fontFamily"])
     AddToGroup("AutoSave", labInt)
 
     y += 18
-    g_ToggleAutoSave := ToggleBox(MainGui, rowX + rowW - 18, y + 8, "SettingsAutoSaveEnabled",
-        CFG["autoSave"], (*) => CheckSettingsDirty(), THEME["card"], 17)
-    AddToGroup("AutoSave", g_ToggleAutoSave)
-
     g_AutoSaveIntervalCtrl := DarkSelect(MainGui, rowX, y, 220, 34, "SettingsAutoSaveInterval",
         AutoSaveIntervalLabels(), AutoSaveIntervalIndex(CFG["autoSaveInterval"]),
         (*) => CheckSettingsDirty())
     AddToGroup("AutoSave", g_AutoSaveIntervalCtrl)
 
-    g_AutoSaveStatusDot := MainGui.AddText("x" (rowX + rowW - 78) " y" (y + 8) " w52 h18 Right BackgroundTrans c"
+    g_ToggleAutoSave := ToggleBox(MainGui, rowX + rowW - 86, y + 8, "SettingsAutoSaveEnabled",
+        CFG["autoSave"], (*) => CheckSettingsDirty(), THEME["card"], 17)
+    AddToGroup("AutoSave", g_ToggleAutoSave)
+
+    g_AutoSaveStatusDot := MainGui.AddText("x" (rowX + rowW - 62) " y" (y + 8) " w62 h18 BackgroundTrans c"
         (CFG["autoSave"] ? THEME["success"] : THEME["textMuted"]) " vAutoSaveOnOff",
         CFG["autoSave"] ? "Вкл" : "Выкл")
     g_AutoSaveStatusDot.SetFont("s10 bold", THEME["fontFamily"])
@@ -952,13 +955,11 @@ BuildMainGui() {
             btn.ctrl.Redraw()
         }
         for name, ctrls in StatGroups {
-            for ctrl in ctrls {
-                try ctrl.Visible := false
-            }
+            for ctrl in ctrls
+                ParkGuiCtrl(ctrl, true)
         }
-        for ctrl in StatGroups[tabName] {
-            try ctrl.Visible := true
-        }
+        for ctrl in StatGroups[tabName]
+            ParkGuiCtrl(ctrl, false)
         ; Не перерисовываем всё окно принудительно — это вызывает мерцание.
     }
     
@@ -1985,21 +1986,7 @@ ShowMainGui() {
 
 ; Обновляет подпись статуса автосохранения в заголовке окна
 UpdateAutoSaveStatus() {
-    global MainGui, CFG, STATE, THEME
-    if !MainGui
-        return
-    try {
-        if !CFG["autoSave"] {
-            MainGui["AutoSaveStatus"].Text := "АВТОСОХРАНЕНИЕ ВЫКЛ"
-            MainGui["AutoSaveStatus"].Opt("c" THEME["textMuted"])
-            MainGui["AutoSaveStatus"].Redraw()
-            return
-        }
-        t := STATE["lastAutoSave"] != "" ? "  ·  " FormatTime(STATE["lastAutoSave"], "HH:mm") : ""
-        MainGui["AutoSaveStatus"].Text := "АВТОСОХРАНЕНИЕ ВКЛ" t
-        MainGui["AutoSaveStatus"].Opt("c" THEME["textMuted"])
-        MainGui["AutoSaveStatus"].Redraw()
-    }
+    ; Состояние автосохранения больше не дублируется в шапке.
 }
 
 UpdateAppClock() {
@@ -2010,4 +1997,3 @@ UpdateAppClock() {
     UpdateAutoSaveInfoLine()
     UpdateSessionInfo()
 }
-
