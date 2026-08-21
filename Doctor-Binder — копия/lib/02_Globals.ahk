@@ -43,8 +43,8 @@ global THEME := Map(
     "text",         "f2f4f7",
     "textTitle",    "f7f9fc",
     "textBody",     "dde3ea",
-    "textDim",      "9aa4b2",
-    "textMuted",    "626d7b",
+    "textDim",      "a3adba",   ; вторичный текст — чуть контрастнее
+    "textMuted",    "707c8b",   ; подписи/мета — читаемо, но спокойно
 
     ; ── Акцент (использовать экономно) ────────────────────────────────────────
     "accent",       "38bdf8",
@@ -69,7 +69,7 @@ global THEME := Map(
     "fontTitle",    14,         ; заголовок страницы
     "fontSection",  10,         ; заголовок карточки
     "fontBody",     9,
-    "fontMeta",     7,          ; label / caption
+    "fontMeta",     8,          ; label / caption (на 1px крупнее)
     "fontFamily",   "Segoe UI Variable Text",
     "fontFallback", "Segoe UI",
     "fontMono",     "Consolas",

@@ -74,6 +74,17 @@ class StyledBtn {
         this.Refresh()
     }
 
+    ; Очень мягкий cyan-акцент при наведении (для action-строк).
+    ; Без свечения: меняется только оттенок поверхности и цвет рамки.
+    SetHoverAccent(bgColor := "", borderColor := "") {
+        global THEME
+        if !IsObject(this.colors)
+            return
+        this.colors.hover := bgColor = "" ? BlendHex(this.colors.bg, THEME["accent"], 0.10) : bgColor
+        this.colors.borderHover := borderColor = "" ? THEME["accentDark"] : borderColor
+        this.Refresh()
+    }
+
     ; Мягкое свечение (enhancement, не основа дизайна).
     SetGlow(color) {
         this.glow := color
@@ -161,10 +172,11 @@ class StyledBtn {
             this.glow := this.colors.HasOwnProp("glow") ? this.colors.glow : ""
             this.ApplyVisual(this.colors.bg, this.colors.text)
         } else {
-            ; Приглушённое (disabled) состояние: та же геометрия, меньше контраста.
+            ; Disabled: та же геометрия, без акцента и свечения, но текст
+            ; остаётся читаемым (textDim вместо muted).
             this.glow := ""
-            this.colors := {bg: THEME["surface"], hover: THEME["surface"], pressed: THEME["surface"]
-                , border: THEME["border"], borderHover: THEME["border"], text: THEME["textMuted"], glow: ""}
+            this.colors := {bg: THEME["bgElevated"], hover: THEME["bgElevated"], pressed: THEME["bgElevated"]
+                , border: THEME["border"], borderHover: THEME["border"], text: THEME["textDim"], glow: ""}
             this.ApplyVisual(this.colors.bg, this.colors.text)
         }
     }
@@ -595,7 +607,7 @@ CreateInput(parent, x, y, w, h, options := "", value := "", fontSize := 10, back
 ; Маленький muted-label над полем (LABEL в верхнем регистре).
 CreateFieldLabel(parent, x, y, w, text, color := "") {
     global THEME
-    lbl := parent.AddText("x" x " y" y " w" w " h14 BackgroundTrans c" (color = "" ? THEME["textMuted"] : color), text)
+    lbl := parent.AddText("x" x " y" y " w" w " h15 BackgroundTrans c" (color = "" ? THEME["textDim"] : color), text)
     lbl.SetFont("s" THEME["fontMeta"] " bold", THEME["fontFamily"])
     return lbl
 }
