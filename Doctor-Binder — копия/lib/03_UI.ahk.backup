@@ -1,0 +1,395 @@
+; ╔══════════════════════════════════════════════════════════════╗
+; ║  Doctor Binder v2.1 — модуль: ui                            ║
+; ║  UI-компоненты: кнопки, ховер, тёмная тема      ║
+; ╚══════════════════════════════════════════════════════════════╝
+; ВНИМАНИЕ: этот файл — МОДУЛЬ. Не запускайте его отдельно,
+; он подключается через #Include из google.ahk
+;
+class StyledBtn {
+    __New(parent, x, y, w, h, text, callback, style := "default", tip := "") {
+        global HoverButtons
+        this.parent := parent
+        this.x := x, this.y := y, this.w := w, this.h := h
+        this.callback := callback
+        this.style := style
+        this.tip := tip
+        this.text := text
+        this.colors := this.GetColors(style)
+        this.currentBg := this.colors.bg
+        this.isHovered := false
+        this.isClickable := true
+        this.lastState := true
+
+        ; Надёжная схема для AHK v2:
+        ; 1) bgCtrl — отдельная скруглённая поверхность;
+        ; 2) ctrl — прозрачный текстовый/кликабельный слой.
+        ; Мы НЕ применяем region к текстовому STATIC-контролу, поэтому текст
+        ; не исчезает и не ломает скругление. Оба контрола создаются после
+        ; карточек и остаются поверх них.
+        this.surface := parent.AddText("x" x " y" y " w" w " h" h " Background" this.colors.bg, "")
+        this.ctrl := parent.AddText("x" x " y" y " w" w " h" h " Center 0x200 BackgroundTrans c" this.colors.text " -Wrap", text)
+        this.ctrl.SetFont("s9 bold", "Segoe UI")
+
+        this.ApplyShape()
+        this.ctrl.OnEvent("Click", (*) => this.OnClick())
+        HoverButtons.Push(this)
+    }
+
+    BuildTextOptions(textColor) {
+        return "x" this.x " y" this.y " w" this.w " h" this.h " Center 0x200 BackgroundTrans c" textColor " -Wrap"
+    }
+
+    ApplyShape() {
+        r := Min(9, Max(6, this.h // 4))
+        try RoundCorners(this.surface, this.w, this.h, r)
+    }
+
+    OnClick() {
+        if !this.isClickable
+            return
+        this.SetPressed(true)
+        SetTimer(() => this.SetPressed(false), -80)
+        try this.callback.Call()
+    }
+
+    SetPressed(state) {
+        if !this.isClickable
+            return
+        bg := state ? this.colors.pressed : (this.isHovered ? this.colors.hover : this.colors.bg)
+        this.ApplyVisual(bg, this.colors.text)
+    }
+
+    GetColors(style) {
+        style := StrLower(style)
+        switch style {
+            case "success", "green", "ok", "save": return {bg: "31583a", hover: "42764d", pressed: "294b31", text: "f5fff6"}
+            case "danger", "red", "delete", "error": return {bg: "612f39", hover: "7d3d49", pressed: "512730", text: "fff5f6"}
+            case "info", "blue", "primary": return {bg: "30406f", hover: "40558f", pressed: "28365f", text: "f4f7ff"}
+            case "warning", "yellow": return {bg: "6b572d", hover: "846c38", pressed: "594923", text: "fffaf0"}
+            default: return {bg: "2b2d42", hover: "3b3f57", pressed: "252739", text: "dbe3f7"}
+        }
+    }
+
+    ApplyVisual(bg, textColor) {
+        this.currentBg := bg
+        ; ВАЖНО: не вызываем Opt() на текстовом слое с Background/region.
+        ; Меняем только поверхность, а тексту меняем только цвет.
+        try this.surface.Opt("Background" bg)
+        try this.ctrl.Opt("c" textColor)
+        try this.ctrl.Text := this.text
+        try this.surface.Redraw()
+        try this.ctrl.Redraw()
+    }
+
+    SetVisual(bg, textColor := "ffffff", hoverBg := "") {
+        if hoverBg = ""
+            hoverBg := bg
+        this.colors := {bg: bg, hover: hoverBg, pressed: bg, text: textColor}
+        this.ApplyVisual(bg, textColor)
+    }
+
+    SetEnabledStyle(isActive, style := "success") {
+        global THEME
+        this.isClickable := isActive
+        this.isHovered := false
+        if isActive {
+            this.colors := this.GetColors(style)
+            this.ApplyVisual(this.colors.bg, this.colors.text)
+        } else {
+            this.colors := {bg: THEME["btnBg"], hover: THEME["btnBg"], pressed: THEME["btnBg"], text: "66687a"}
+            this.ApplyVisual(this.colors.bg, this.colors.text)
+        }
+    }
+
+    SetVisible(visible) {
+        try this.surface.Visible := visible
+        try this.ctrl.Visible := visible
+    }
+
+    SetHover(state) {
+        if !this.isClickable
+            return
+        if this.isHovered = state
+            return
+        this.isHovered := state
+        if state {
+            if this.tip != ""
+                ToolTip(this.tip, , , 1000)
+        } else {
+            ToolTip(, , , 1000)
+        }
+        target := state ? this.colors.hover : this.colors.bg
+        this.ApplyVisual(target, this.colors.text)
+        try DllCall("user32\SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", state ? 32649 : 32512, "Ptr"))
+    }
+}
+
+; Принудительно поднимает кнопку над карточкой/разделителем. Это важно для
+; AHK GUI: фон карточки создаётся раньше, а некоторые Win32 region-контролы
+; могут оказаться выше по Z-order после SetWindowRgn.
+BringButtonToFront(ctrl) {
+    try {
+        ; HWND_TOP (0) + SHOWWINDOW: кнопка гарантированно остаётся видимой
+        ; и выше фоновых STATIC-панелей. Координаты и размер не меняются.
+        DllCall("user32\SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 0
+            , "Int", 0, "Int", 0, "Int", 0, "Int", 0
+            , "UInt", 0x0053) ; SHOWWINDOW | NOACTIVATE | NOMOVE | NOSIZE
+        return true
+    } catch {
+        return false
+    }
+}
+
+SendPanelToBack(ctrl) {
+    try {
+        if !IsObject(ctrl) || !ctrl.Hwnd
+            return false
+        ; HWND_BOTTOM (1): фон панели уходит под остальные дочерние контролы.
+        ; Это не меняет координаты/размер и не активирует окно.
+        DllCall("user32\SetWindowPos", "Ptr", ctrl.Hwnd, "Ptr", 1
+            , "Int", 0, "Int", 0, "Int", 0, "Int", 0
+            , "UInt", 0x0017) ; NOACTIVATE | NOMOVE | NOSIZE
+        return true
+    } catch {
+        return false
+    }
+}
+
+CreateStyledButton(parent, x, y, w, h, text, callback, style := "default", tip := "") {
+    return StyledBtn(parent, x, y, w, h, text, callback, style, tip)
+}
+
+; Скругляет Win32/AHK-контрол без внешних декоративных пикселей.
+; SetWindowRgn передаёт владение созданным HRGN окну при успешном вызове,
+; поэтому удаляем region только если SetWindowRgn завершился неудачно.
+RoundCorners(ctrl, w, h, radius := 8) {
+    if !IsObject(ctrl)
+        return false
+    try hwnd := ctrl.Hwnd
+    catch
+        return false
+    if !hwnd || !WinExist("ahk_id " hwnd)
+        return false
+
+    w := Max(1, Integer(w))
+    h := Max(1, Integer(h))
+    radius := Max(1, Min(Integer(radius), Integer(Min(w, h) / 2)))
+
+    ; GDI CreateRoundRectRgn использует правую/нижнюю границу как exclusive.
+    hRgn := DllCall("gdi32\CreateRoundRectRgn"
+        , "Int", 0, "Int", 0, "Int", w + 1, "Int", h + 1
+        , "Int", radius * 2, "Int", radius * 2, "Ptr")
+    if !hRgn
+        return false
+
+    if DllCall("user32\SetWindowRgn", "Ptr", hwnd, "Ptr", hRgn, "Int", true) {
+        ; Окно теперь владеет HRGN. Не вызываем DeleteObject.
+        return true
+    }
+
+    DllCall("gdi32\DeleteObject", "Ptr", hRgn)
+    return false
+}
+
+; ───────────────────────────────────────────────────────────────────────────────
+; СОВРЕМЕННЫЕ СКРУГЛЁННЫЕ КНОПКИ (rounded + заливка)
+; Залитая цветная подложка со скруглёнными углами (RoundCorners) + текст на
+; прозрачном фоне. При наведении кнопка подсвечивается более ярким цветом и
+; курсор становится «пальцем» (IDC_HAND), при нажатии — вдавливается.
+; ───────────────────────────────────────────────────────────────────────────────
+CreateOutlineBtn(parent, x, y, w, h, text, callback, style := "default", tip := "") {
+    ; Единый компонент для обычных кнопок и редактора.
+    return CreateStyledButton(parent, x, y, w, h, text, callback, style, tip)
+}
+
+OutlineSetHover(obj, state) {
+    try obj.SetHover(state)
+}
+
+OutlinePress(obj) {
+    try obj.OnClick()
+}
+
+OutlineSetVisible(obj, visible) {
+    if !IsObject(obj)
+        return
+    try obj.SetVisible(visible)
+    catch {
+        try obj.ctrl.Visible := visible
+    }
+}
+
+; ───────────────────────────────────────────────────────────────────
+; Плавное появление окна (fade-in)
+; ───────────────────────────────────────────────────────────────────
+FadeInGui(gui, steps := 14, interval := 14) {
+    try {
+        WinSetTransparent(0, gui)
+        step := 255 // steps
+        Loop steps {
+            try WinSetTransparent(A_Index * step, gui)
+            Sleep interval
+        }
+        ; Не сбрасываем прозрачность в "Off": сброс вызывает полную перерисовку
+        ; окна и выглядит как «дёргание» при запуске. 255 = полностью непрозрачно.
+        WinSetTransparent(255, gui)
+    } catch {
+        ; Если анимация не удалась — просто оставляем окно как есть
+        try WinSetTransparent("Off", gui)
+    }
+}
+
+WM_MOUSEMOVE(wParam, lParam, msg, hwnd) {
+    ; Оставляем обработчик совместимым, но фактический hover обслуживается
+    ; таймером PollButtonHover. Это надёжнее для дочерних STATIC-контролов AHK.
+    PollButtonHover()
+}
+
+PollButtonHover() {
+    global HoverButtons
+    static lastHwnd := 0
+
+    try MouseGetPos(,, &winId, &ctrlHwnd, 2)
+    catch {
+        return
+    }
+
+    if (ctrlHwnd = lastHwnd)
+        return
+
+    if lastHwnd {
+        for btn in HoverButtons {
+            try {
+                if !IsObject(btn)
+                    continue
+                hit := false
+                if btn.HasOwnProp("ctrl") && IsObject(btn.ctrl) && btn.ctrl.Hwnd = lastHwnd
+                    hit := true
+                if btn.HasOwnProp("surface") && IsObject(btn.surface) && btn.surface.Hwnd = lastHwnd
+                    hit := true
+                if btn.HasOwnProp("frame") && IsObject(btn.frame) && btn.frame.Hwnd = lastHwnd
+                    hit := true
+                if hit {
+                    btn.SetHover(false)
+                    break
+                }
+            }
+        }
+    }
+
+    if ctrlHwnd {
+        for btn in HoverButtons {
+            try {
+                if !IsObject(btn)
+                    continue
+                hit := false
+                if btn.HasOwnProp("ctrl") && IsObject(btn.ctrl) && btn.ctrl.Hwnd = ctrlHwnd
+                    hit := true
+                if btn.HasOwnProp("surface") && IsObject(btn.surface) && btn.surface.Hwnd = ctrlHwnd
+                    hit := true
+                if btn.HasOwnProp("frame") && IsObject(btn.frame) && btn.frame.Hwnd = ctrlHwnd
+                    hit := true
+                if hit {
+                    btn.SetHover(true)
+                    lastHwnd := ctrlHwnd
+                    return
+                }
+            }
+        }
+    }
+
+    lastHwnd := 0
+}
+
+
+CleanupHoverButtons(gui) {
+    global HoverButtons
+    if !IsObject(HoverButtons) {
+        HoverButtons := []
+        return
+    }
+    if HoverButtons.Length = 0
+        return
+    newButtons := []
+    Loop HoverButtons.Length {
+        try {
+            btn := HoverButtons[A_Index]
+            if !IsObject(btn) || !btn.HasOwnProp("parent") || !btn.HasOwnProp("ctrl")
+                continue
+            if btn.parent = gui
+                continue
+            if !IsObject(btn.ctrl)
+                continue
+            try {
+                if btn.ctrl.Hwnd && WinExist("ahk_id " btn.ctrl.Hwnd)
+                    newButtons.Push(btn)
+            }
+        }
+    }
+    HoverButtons := newButtons
+}
+
+; WM_MOUSEMOVE у STATIC-контролов не всегда проходит через OnMessage стабильно.
+; Периодический опрос делает hover надёжным на всех кнопках и окнах.
+SetTimer(PollButtonHover, 40)
+
+SetDarkControl(ctrl) {
+    if !IsObject(ctrl)
+        return
+        
+    try {
+        if VerCompare(A_OSVersion, "10.0.17763") >= 0 {
+            ; Попытка 1: Стандартная темная тема проводника
+            DllCall("uxtheme\SetWindowTheme", "Ptr", ctrl.Hwnd, "Str", "DarkMode_Explorer", "Ptr", 0)
+            
+            ; Попытка 2: Если первая не сработала, иногда просто "Explorer" подхватывает темный режим приложения
+            ; (Можно раскомментировать, если первая не работает)
+            ; DllCall("uxtheme\SetWindowTheme", "Ptr", ctrl.Hwnd, "Str", "Explorer", "Ptr", 0)
+        }
+    }
+}
+
+
+SetListViewRowHeight(lv, height := 28) {
+    ; Создаём невидимый ImageList нужной высоты
+    ; Это единственный способ увеличить высоту строк в ListView
+    hIL := DllCall("comctl32\ImageList_Create", "Int", 1, "Int", height, "UInt", 0x00000020, "Int", 1, "Int", 1, "Ptr")
+    SendMessage(0x1003, 0, hIL, lv.Hwnd)  ; LVM_SETIMAGELIST, LVSIL_SMALL
+}
+
+
+; ══════════════════════════════════════════════════════════════════════════
+; ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ РЕДАКТОРА (ВСТАВИТЬ В КОНЕЦ, УДАЛИВ СТАРЫЕ)
+; ══════════════════════════════════════════════════════════════════════════
+
+CreateClearBtn(parent, x, y, size, callback) {
+    global THEME, HoverButtons
+
+    iconSymbol := Chr(0xE894)
+    btn := parent.AddText("x" x " y" y " w" size " h" size " Center 0x200 BackgroundTrans c" THEME["textMuted"], iconSymbol)
+    try btn.SetFont("s10", "Segoe MDL2 Assets")
+    catch {
+        btn.Value := "✕"
+        btn.SetFont("s10", "Segoe UI")
+    }
+
+    ; Без Move/Sleep: нажатие не должно физически двигать контрол.
+    btn.OnEvent("Click", (*) => callback())
+
+    HoverButtons.Push({
+        ctrl: btn,
+        parent: parent,
+        isClickable: true,
+        SetHover: (thisObj, state) => (
+            btn.Opt("c" (state ? "f38ba8" : THEME["textMuted"])),
+            btn.Redraw(),
+            DllCall("user32\SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", state ? 32649 : 32512, "Ptr"))
+        )
+    })
+    return btn
+}
+
+; ══════════════════════════════════════════════════════════════════════════
+; СИСТЕМА РАДИАЛЬНОГО МЕНЮ (WHEEL MENU) - ИСПРАВЛЕННАЯ
+; ══════════════════════════════════════════════════════════════════════════
+
