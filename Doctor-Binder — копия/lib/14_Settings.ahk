@@ -580,9 +580,9 @@ SetIdFormatGUI(fmt) {
     for id, btn in IdFormatButtons {
         active := (id = fmt)
         if active
-            btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"], THEME["accent"])
+            btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accent"], THEME["accent"])
         else
-            btn.SetVisual(THEME["bgElevated"], THEME["textDim"], THEME["bgHover"], THEME["border"])
+            btn.SetVisual("0d1117", THEME["textMuted"], "121820", "232a36")
     }
 
     ; Карточка «Текущий пациент» показывает актуальный формат вставки

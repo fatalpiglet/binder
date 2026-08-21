@@ -627,14 +627,9 @@ CreateCard(parent, x, y, w, h, radius := 0, surfaceColor := "") {
     RoundCorners(frame, w, h, radius)
     surface := parent.AddText("x" (x + 1) " y" (y + 1) " w" (w - 2) " h" (h - 2) " Background" surfaceColor, "")
     RoundCorners(surface, w - 2, h - 2, radius)
-    ; Едва заметный блик по верхней кромке — объём без теней и градиентов.
-    top := parent.AddText("x" (x + radius) " y" (y + 1) " w" (w - radius * 2) " h1 Background"
-        BlendHex(surfaceColor, "ffffff", 0.05), "")
-    ; Порядок важен: последним вниз уходит самый нижний слой.
-    SendPanelToBack(top)
     SendPanelToBack(surface)
     SendPanelToBack(frame)
-    return {frame: frame, surface: surface, top: top}
+    return {frame: frame, surface: surface, top: ""}
 }
 
 ; ─── Строка-карточка настройки с hover ────────────────────────────────────────
@@ -651,7 +646,7 @@ class HoverCard {
         card := CreateCard(parent, x, y, w, h, radius ? radius : THEME["radiusLg"], this.surfaceColor)
         this.frame := card.frame
         this.surface := card.surface
-        this.topLine := card.top
+        this.topLine := ""
         this.children := []
         this.hovered := false
         this.visible := true
@@ -685,7 +680,8 @@ class HoverCard {
         this.visible := state
         try this.frame.Visible := state
         try this.surface.Visible := state
-        try this.topLine.Visible := state
+        if IsObject(this.topLine)
+            try this.topLine.Visible := state
         for c in this.children {
             try c.Visible := state
         }
@@ -699,31 +695,31 @@ class HoverCard {
 class ToggleBox {
     static Registry := []
 
-    __New(parent, x, y, name, checked := false, onToggle := "", backdrop := "", size := 20) {
+    __New(parent, x, y, name, checked := false, onToggle := "", backdrop := "", size := 17) {
         global THEME
         this.parent := parent
         this.name := name
         this.size := size
         this.enabled := true
         this.onToggle := onToggle
-        this.backdrop := backdrop = "" ? THEME["bgElevated"] : backdrop
+        this.backdrop := backdrop = "" ? THEME["card"] : backdrop
 
         ; Скрытый настоящий чекбокс — источник истины для логики приложения
         this.hidden := parent.AddCheckbox("x0 y0 w0 h0 Hidden v" name " Checked" (checked ? 1 : 0), "")
 
         this.glowOff := this.backdrop
-        this.glowOn := BlendHex(this.backdrop, THEME["success"], 0.22)
+        this.glowOn := BlendHex(this.backdrop, THEME["success"], 0.14)
         this.glow := parent.AddText("x" (x - 2) " y" (y - 2) " w" (size + 4) " h" (size + 4)
             " Background" this.glowOff, "")
-        RoundCorners(this.glow, size + 4, size + 4, 8)
+        RoundCorners(this.glow, size + 4, size + 4, 6)
 
         this.frame := parent.AddText("x" x " y" y " w" size " h" size " Background" THEME["fieldBorder"], "")
-        RoundCorners(this.frame, size, size, 6)
+        RoundCorners(this.frame, size, size, 4)
 
         this.box := parent.AddText("x" (x + 1) " y" (y + 1) " w" (size - 2) " h" (size - 2)
             " Center 0x200 Background" THEME["field"] " c" THEME["field"], "✓")
-        this.box.SetFont("s10 bold", "Segoe UI Symbol")
-        RoundCorners(this.box, size - 2, size - 2, 6)
+        this.box.SetFont("s8 bold", "Segoe UI Symbol")
+        RoundCorners(this.box, size - 2, size - 2, 4)
         this.box.OnEvent("Click", (*) => this.Toggle())
 
         ToggleBox.Registry.Push(this)
@@ -796,6 +792,156 @@ class ToggleBox {
         for t in ToggleBox.Registry {
             try t.Apply()
         }
+    }
+}
+
+; Тёмный select без системного Windows-списка: кнопка + popup.
+class DarkSelect {
+    static OpenGui := ""
+
+    __New(parent, x, y, w, h, name, items, selectedIndex := 1, onChange := "") {
+        global THEME
+        this.parent := parent
+        this.items := items
+        this.onChange := onChange
+        this.enabled := true
+        this.visible := true
+        this.w := w, this.h := h
+        if (selectedIndex < 1 || selectedIndex > items.Length)
+            selectedIndex := 1
+        this.hidden := parent.AddEdit("x0 y0 w0 h0 Hidden Number v" name, selectedIndex)
+        label := items[selectedIndex]
+        this.btn := CreateStyledButton(parent, x, y, w, h, label, (*) => this.Open(), "default")
+        this.btn.SetBackdrop(THEME["card"])
+        this.ApplyIdle()
+        this.btn.SetLayout("left", "▾")
+        this.btn.ctrl.SetFont("s10 norm", THEME["fontFamily"])
+    }
+
+    Value {
+        get {
+            try return Integer(this.hidden.Value)
+            return 1
+        }
+        set {
+            idx := Integer(value)
+            if (idx < 1)
+                idx := 1
+            if (idx > this.items.Length)
+                idx := this.items.Length
+            try this.hidden.Value := idx
+            try this.btn.ctrl.Text := this.items[idx]
+            this.ApplyIdle()
+        }
+    }
+
+    Enabled {
+        get => this.enabled
+        set {
+            this.enabled := value ? true : false
+            this.btn.isClickable := this.enabled
+            this.ApplyIdle()
+        }
+    }
+
+    ApplyIdle() {
+        global THEME
+        if this.enabled
+            this.btn.SetVisual("0d1117", "e5e7eb", "121820", "232a36")
+        else
+            this.btn.SetVisual("0d1117", THEME["textDisabled"], "0d1117", "232a36")
+        this.btn.SetLayout("left", "▾")
+    }
+
+    Open() {
+        global THEME, MainGui
+        if !this.enabled
+            return
+        try {
+            if DarkSelect.OpenGui
+                DarkSelect.OpenGui.Destroy()
+        }
+        this.btn.SetVisual("0b0f14", "e5e7eb", "0b0f14", "38bdf8")
+        this.btn.SetLayout("left", "▾")
+
+        itemH := 32
+        pad := 6
+        h := pad * 2 + this.items.Length * itemH
+        w := this.w
+        pop := Gui("-Caption +Border +Owner" this.parent.Hwnd, "DarkSelect")
+        pop.BackColor := "0b0f14"
+        pop.SetFont("s10 c" THEME["text"], THEME["fontFamily"])
+        pop.AddText("x0 y0 w" w " h" h " Background0b0f14", "")
+        y := pad
+        for i, label in this.items {
+            active := (i = this.Value)
+            b := CreateStyledButton(pop, 4, y, w - 8, itemH - 2, label,
+                ((idx) => (*) => this.Choose(idx))(i), "default")
+            b.SetBackdrop("0b0f14")
+            if active
+                b.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"])
+            else
+                b.SetVisual("0b0f14", "e5e7eb", "121820", "0b0f14")
+            b.SetLayout("left", "")
+            b.ctrl.SetFont("s10 norm", THEME["fontFamily"])
+            y += itemH
+        }
+        DarkSelect.OpenGui := pop
+        this.btn.ctrl.GetPos(&bx, &by, &bw, &bh)
+        pt := Buffer(8, 0)
+        NumPut("Int", bx, pt, 0)
+        NumPut("Int", by + bh, pt, 4)
+        DllCall("user32\ClientToScreen", "Ptr", this.parent.Hwnd, "Ptr", pt)
+        sx := NumGet(pt, 0, "Int")
+        sy := NumGet(pt, 4, "Int")
+        pop.Show("x" sx " y" sy " w" w " h" h)
+        try RoundCorners(pop, w, h, 8)
+        pop.OnEvent("Close", (*) => this.Close())
+        pop.OnEvent("Escape", (*) => this.Close())
+        SetTimer(() => this.WatchOutside(), 80)
+    }
+
+    WatchOutside() {
+        if !DarkSelect.OpenGui
+            return
+        if !GetKeyState("LButton", "P")
+            return
+        try {
+            MouseGetPos(, , &win)
+            if (win != DarkSelect.OpenGui.Hwnd)
+                this.Close()
+        }
+    }
+
+    Choose(idx) {
+        this.Value := idx
+        this.Close()
+        if this.onChange
+            try this.onChange.Call()
+    }
+
+    Close() {
+        SetTimer(() => this.WatchOutside(), 0)
+        try {
+            if DarkSelect.OpenGui
+                DarkSelect.OpenGui.Destroy()
+        }
+        DarkSelect.OpenGui := ""
+        this.ApplyIdle()
+    }
+
+    SetVisible(state) {
+        this.visible := state
+        try this.btn.SetVisible(state)
+        if !state
+            this.Close()
+    }
+
+    Opt(*) {
+    }
+
+    Redraw() {
+        try this.btn.Refresh()
     }
 }
 
