@@ -415,7 +415,7 @@ BuildMainGui() {
     
     ; --- ЛЕВОЕ МЕНЮ (НАВИГАЦИЯ) ---
     xMenu := 20
-    wMenu := 240
+    wMenu := 190          ; подменю уже главного sidebar
     hMenu := 440 ; Высота меню и контента
     
     ; Фон под меню (скруглённая панель)
@@ -490,7 +490,7 @@ BuildMainGui() {
     
     ; --- ПРАВАЯ ОБЛАСТЬ (КОНТЕНТ) ---
     xContent := xMenu + wMenu + 20
-    wContent := 640
+    wContent := 690
     
     ; ФОНОВАЯ ПОДЛОЖКА ПОД КОНТЕНТ (ВИЗУАЛЬНЫЙ КОНТЕЙНЕР)
     contentPanel := AddCardPanel(xContent, yStart, wContent, hMenu, 14, THEME["warning"])
@@ -841,7 +841,7 @@ BuildMainGui() {
     ; --- ЛЕВОЕ МЕНЮ ---
     yStart := 210
     xMenu := 20
-    wMenu := 240
+    wMenu := 190
     hMenu := 440
     
     statPanel := AddCardPanel(xMenu, yStart, wMenu, hMenu, THEME["radiusLg"], THEME["success"])
@@ -897,7 +897,7 @@ BuildMainGui() {
     
     ; --- ПРАВАЯ ОБЛАСТЬ ---
     xContent := xMenu + wMenu + 20
-    wContent := 640
+    wContent := 690
     
     statContent := AddCardPanel(xContent, yStart, wContent, hMenu, THEME["radiusLg"], THEME["success"])
     
@@ -1001,7 +1001,7 @@ BuildMainGui() {
     
     ; --- ЛЕВОЕ МЕНЮ (НАВИГАЦИЯ) ---
     xMenu := 20
-    wMenu := 200 ; Чуть уже
+    wMenu := 190
     hMenu := 460
     
     helpPanel := AddCardPanel(xMenu, yStart, wMenu, hMenu, THEME["radiusLg"], THEME["accentLight"])
@@ -1058,7 +1058,7 @@ BuildMainGui() {
     
     ; --- ЦЕНТРАЛЬНАЯ ОБЛАСТЬ (МЕНЯЮЩИЙСЯ КОНТЕНТ) ---
     xCenter := xMenu + wMenu + 20
-    wCenter := 440 ; Место под контент
+    wCenter := 450 ; Место под контент
     
     centerPanel := AddCardPanel(xCenter, yStart, wCenter, hMenu, THEME["radiusLg"], THEME["accentLight"])
     

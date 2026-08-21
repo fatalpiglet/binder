@@ -101,6 +101,8 @@ RefreshBindList(filter := "") {
         try MainGui["StatTotalBinds"].Text := totalCount
         try MainGui["StatActiveBinds"].Text := activeCount
     }
+    ; Показатели на «Обзоре» всегда отражают актуальный набор биндов
+    try UpdateDashboardCards()
 }
 
 BindPrevPage(*) {
