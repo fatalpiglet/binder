@@ -75,9 +75,11 @@ global THEME := Map(
     "fontMono",     "Consolas",
 
     ; ── Геометрия ─────────────────────────────────────────────────────────────
-    "radiusSm",     6,
-    "radius",       10,
-    "radiusLg",     12,
+    ; Единая система скруглений: поля 8, кнопки 8–10, карточки 10–12, окна 12–16
+    "radiusSm",     8,          ; inputs / малые элементы
+    "radius",       10,         ; buttons / компактные карточки
+    "radiusLg",     12,         ; карточки
+    "radiusWin",    14,         ; окна и popup
     "spacing",      16,
     "spacingSm",    8,
     "spacingLg",    24,
@@ -147,6 +149,7 @@ global MainGui := "", OverlayGui := "", EditorGui := "", FilterMenuGui := "", Fi
 global g_BtnSaveProfile := "", g_BtnSaveSettings := "", g_BtnGlobalSave := ""
 ; Индикаторы единой системы состояний (● READY / ACTIVE / SAVED / WAITING / ERROR)
 global g_SystemStatus := "", g_ProfileStatus := "", g_PatientStatus := "", g_SaveStatus := ""
+global g_PatientGlow := "", g_KpiPatientDot := "", g_KpiSaveDot := ""
 global CurrentSearch := "", CurrentFilter := "", CurrentIdFormat := ""
 global OverlayVisible := false, ChatIsOpen := false
 global CapturedEditorKey := "", OverlayInputHook := ""

@@ -9,6 +9,7 @@ BuildMainGui() {
     global MainGui, HoverButtons, THEME, STATE, CFG, STATS, APP_NAME, VERSION, AUTHOR
     global g_BtnSaveProfile, g_BtnSaveSettings, g_BtnGlobalSave
     global g_SystemStatus, g_ProfileStatus, g_PatientStatus, g_SaveStatus, g_PatientGlow
+    global g_KpiPatientDot, g_KpiSaveDot
     global GlobalUnsavedChanges, EditorConfirmDelete
     global SettingGroups := Map()
 
@@ -60,18 +61,17 @@ BuildMainGui() {
     brandMark.SetFont("s12", "Segoe UI Symbol")
     RoundCorners(brandMark, 30, 30, THEME["radiusSm"] + 1)
 
-    MainGui.SetFont("s12 bold", THEME["fontFamily"])
-    MainGui.AddText("x62 y10 w360 h22 c" THEME["textTitle"] " BackgroundTrans", "Doctor Binder")
-    MainGui.SetFont("s7 norm", THEME["fontFamily"])
-    MainGui.AddText("x63 y32 w360 h14 c" THEME["textMuted"] " BackgroundTrans", "Медицинская консоль  ·  v" VERSION)
+    MainGui.SetFont("s13 bold", THEME["fontFamily"])
+    MainGui.AddText("x62 y17 w360 h22 c" THEME["textTitle"] " BackgroundTrans", "Doctor Binder")
 
     ; Состояние системы — маленькая точка с очень мягким зелёным свечением
-    g_SystemStatus := StatusDot(MainGui, WIN_W - 320, 15, "Система готова", THEME["success"], THEME["surface"], 8, 180, 8)
+    g_SystemStatus := StatusDot(MainGui, WIN_W - 300, 15, "Система готова", THEME["success"], THEME["surface"], 8, 170, 8)
     MainGui.SetFont("s7 norm", THEME["fontFamily"])
-    MainGui.AddText("x" (WIN_W - 302) " y33 w180 h14 c" THEME["textMuted"] " BackgroundTrans vAutoSaveStatus",
+    MainGui.AddText("x" (WIN_W - 282) " y33 w170 h14 c" THEME["textMuted"] " BackgroundTrans vAutoSaveStatus",
         (CFG["autoSave"] ? "АВТОСОХРАНЕНИЕ ВКЛ" : "АВТОСОХРАНЕНИЕ ВЫКЛ"))
 
-    CloseBtn := CreateStyledButton(MainGui, WIN_W - 48, 12, 32, 32, "×", (*) => MainGui.Hide(), "icon")
+    CloseBtn := CreateStyledButton(MainGui, WIN_W - 48, 12, 32, 32, "×", (*) => CloseApplication(), "icon",
+        "Закрыть приложение")
     CloseBtn.SetBackdrop(THEME["surface"])
     try CloseBtn.ctrl.SetFont("s12 norm", "Segoe UI")
     TitleBar.OnEvent("Click", (*) => PostMessage(0xA1, 2, 0, MainGui.Hwnd))
@@ -127,27 +127,36 @@ BuildMainGui() {
     kpiW := 218
     kpiGap := 16
 
-    AddKpiCard(kx, title, valueName, value, subName, sub, valueColor) {
+    ; Показатель: приглушённая подпись, крупное значение, спокойный статус внизу.
+    ; statusColor != "" — вместо обычного текста рисуется маленькая статус-точка.
+    AddKpiCard(kx, title, valueName, value, subName, sub, valueColor, statusColor := "") {
         CreateCard(MainGui, kx, kpiY, kpiW, kpiH, THEME["radius"])
         MainGui.SetFont("s8 norm", THEME["fontFamily"])
-        MainGui.AddText("x" (kx + 16) " y" (kpiY + 14) " w" (kpiW - 32) " h16 c" THEME["textDim"] " BackgroundTrans", title)
-        MainGui.SetFont("s17 bold", THEME["fontFamily"])
-        MainGui.AddText("x" (kx + 15) " y" (kpiY + 34) " w" (kpiW - 30) " h30 c" valueColor " BackgroundTrans v" valueName, value)
-        MainGui.SetFont("s8 norm", THEME["fontFamily"])
-        MainGui.AddText("x" (kx + 16) " y" (kpiY + 68) " w" (kpiW - 32) " h16 c" THEME["textMuted"] " BackgroundTrans v" subName, sub)
+        MainGui.AddText("x" (kx + 18) " y" (kpiY + 15) " w" (kpiW - 36) " h16 c" THEME["textDim"] " BackgroundTrans", title)
+        MainGui.SetFont("s19 bold", THEME["fontFamily"])
+        MainGui.AddText("x" (kx + 17) " y" (kpiY + 33) " w" (kpiW - 34) " h32 c" valueColor " BackgroundTrans v" valueName, value)
+        if statusColor != ""
+            return StatusDot(MainGui, kx + 18, kpiY + 72, sub, statusColor, THEME["card"], 6, kpiW - 40, 7)
+        MainGui.SetFont("s7 norm", THEME["fontFamily"])
+        MainGui.AddText("x" (kx + 18) " y" (kpiY + 71) " w" (kpiW - 36) " h14 c" THEME["textMuted"] " BackgroundTrans v" subName, sub)
+        return ""
     }
 
     CountBinds(&bindsTotal, &bindsActive)
-    AddKpiCard(20, "Текущий пациент", "KpiPatient",
-        STATE["patientId"] = "" ? "—" : STATE["patientId"], "KpiPatientSub",
-        STATE["patientId"] = "" ? "сессия не начата" : "сессия активна",
-        STATE["patientId"] = "" ? THEME["textMuted"] : THEME["accent"])
+    hasPat := STATE["patientId"] != ""
+    g_KpiPatientDot := AddKpiCard(20, "Текущий пациент", "KpiPatient",
+        hasPat ? STATE["patientId"] : "—", "",
+        hasPat ? "сессия активна" : "сессия не начата",
+        hasPat ? THEME["accent"] : THEME["textMuted"],
+        hasPat ? THEME["success"] : THEME["textMuted"])
     AddKpiCard(254, "Биндов в наборе", "KpiBinds", bindsTotal, "KpiBindsSub",
         "активных: " bindsActive, THEME["text"])
     AddKpiCard(488, "Отправлено строк", "KpiSent", STATS["totalSent"], "KpiSentSub",
         "за текущую сессию", THEME["text"])
-    AddKpiCard(722, "Автосохранение", "KpiSave", CFG["autoSave"] ? "Вкл" : "Выкл", "KpiSaveSub",
-        "интервал " CFG["autoSaveInterval"] " сек", CFG["autoSave"] ? THEME["success"] : THEME["textMuted"])
+    g_KpiSaveDot := AddKpiCard(722, "Автосохранение", "KpiSave", CFG["autoSave"] ? "Вкл" : "Выкл", "",
+        "интервал " CFG["autoSaveInterval"] " сек",
+        CFG["autoSave"] ? THEME["success"] : THEME["textMuted"],
+        CFG["autoSave"] ? THEME["success"] : THEME["textMuted"])
 
     ; ───────────────────────── Личное дело (левый блок) ───────────────────────
     profY := 292
@@ -295,8 +304,6 @@ BuildMainGui() {
     btnFilterDisplay.SetBackdrop(THEME["card"])
     btnFilterDisplay.SetLayout("left", "▾")
 
-    ; Разделитель под тулбаром
-    MainGui.AddText("x40 y" (yTool + 60) " w" (wList - 40) " h1 Background" THEME["border"], "")
     
     ; --- ЗАГОЛОВОК ТАБЛИЦЫ (Кастомный) ---
     yList := yTool + 72
@@ -304,7 +311,7 @@ BuildMainGui() {
     
     ; Фон заголовка таблицы
     MainGui.AddText("x30 y" yList " w" (wList-20) " h26 Background" THEME["bgElevated"], "")
-    MainGui.AddText("x30 y" (yList+26) " w" (wList-20) " h1 Background" THEME["border"], "")
+    MainGui.AddText("x30 y" (yList+26) " w" (wList-20) " h1 Background" THEME["cardBorder"], "")
     
     ; === ФИКСИРОВАННЫЕ ШИРИНЫ КОЛОНОК (Сумма = 600, чтобы влез скроллбар) ===
     col1 := 35    ; №
@@ -376,16 +383,16 @@ BuildMainGui() {
     wSide := 200
     
     ; Primary action раздела
-    btnCreate := CreateStyledButton(MainGui, xSide, ySide, wSide, 42, "Создать бинд", (*) => CreateNewBind(), "primary")
+    btnCreate := CreateStyledButton(MainGui, xSide, ySide, wSide, 36, "Создать бинд", (*) => CreateNewBind(), "primary")
     btnCreate.SetBackdrop(THEME["card"])
     btnCreate.SetLayout("left", "+")
 
-    ySide += 62
+    ySide += 58
     CreateFieldLabel(MainGui, xSide, ySide, wSide, "Выбранный элемент")
 
     ySide += 22
     gap := 10
-    btnH := 40
+    btnH := 36
 
     ; Единый спокойный стиль: тёмная поверхность + тонкая рамка
     CreateStyledButton(MainGui, xSide, ySide, wSide, btnH, "Изменить", (*) => EditSelectedBind(), "default").SetBackdrop(THEME["card"])
@@ -397,7 +404,7 @@ BuildMainGui() {
     CreateStyledButton(MainGui, xSide, ySide, wSide, btnH, "Удалить", (*) => DeleteSelectedBind(), "default").SetBackdrop(THEME["card"])
 
     ySide += btnH + 30
-    MainGui.AddText("x" xSide " y" (ySide-16) " w" wSide " h1 Background" THEME["border"], "")
+    MainGui.AddText("x" xSide " y" (ySide-16) " w" wSide " h1 Background" THEME["cardBorder"], "")
     CreateStyledButton(MainGui, xSide, ySide, wSide, btnH, "Отменить действие", (*) => Undo(), "default").SetBackdrop(THEME["card"])
 
     ; ==============================================================================
@@ -501,7 +508,7 @@ BuildMainGui() {
     }
 
     CreateSegmentButton(name, xPos, yPos, label, callback) {
-        btn := CreateStyledButton(MainGui, xPos, yPos, 100, 34, label, callback, "default")
+        btn := CreateStyledButton(MainGui, xPos, yPos, 100, 36, label, callback, "default")
         btn.ctrl.Name := name
         btn.SetBackdrop(THEME["card"])
         btn.SetVisual(THEME["bgElevated"], THEME["textDim"], THEME["bgHover"], THEME["border"])
@@ -622,13 +629,13 @@ BuildMainGui() {
     e4.ctrl.OnEvent("Change", (*) => CheckSettingsDirty())
     
     y += 50
-    bFast := CreateStyledButton(MainGui, x, y, 130, 32, "Быстро", (*) => SetDelayPreset("fast"), "default")
+    bFast := CreateStyledButton(MainGui, x, y, 130, 36, "Быстро", (*) => SetDelayPreset("fast"), "default")
     bFast.SetBackdrop(THEME["card"])
     AddToGroup("Timing", bFast)
-    bNorm := CreateStyledButton(MainGui, x+140, y, 130, 32, "Норма", (*) => SetDelayPreset("norm"), "default")
+    bNorm := CreateStyledButton(MainGui, x+140, y, 130, 36, "Норма", (*) => SetDelayPreset("norm"), "default")
     bNorm.SetBackdrop(THEME["card"])
     AddToGroup("Timing", bNorm)
-    bSlow := CreateStyledButton(MainGui, x+280, y, 130, 32, "Full RP", (*) => SetDelayPreset("rp"), "default")
+    bSlow := CreateStyledButton(MainGui, x+280, y, 130, 36, "Full RP", (*) => SetDelayPreset("rp"), "default")
     bSlow.SetBackdrop(THEME["card"])
     AddToGroup("Timing", bSlow)
     
@@ -769,7 +776,7 @@ BuildMainGui() {
     ; Фон заголовка
     AddToGroup("Screenshots", MainGui.AddText("x" x " y" y " w500 h26 Background" THEME["bgElevated"], ""))
     ; Линия подчеркивания
-    AddToGroup("Screenshots", MainGui.AddText("x" x " y" (y+26) " w500 h1 Background" THEME["border"], ""))
+    AddToGroup("Screenshots", MainGui.AddText("x" x " y" (y+26) " w500 h1 Background" THEME["cardBorder"], ""))
     
     ; Текст колонок
     MainGui.SetFont("s8 bold", THEME["fontFamily"])
@@ -796,15 +803,15 @@ BuildMainGui() {
     ; === 3. КНОПКИ СПРАВА ===
     btnX := x + 510
     
-    bAdd := CreateStyledButton(MainGui, btnX, y, 100, 32, "Добавить", (*) => AddScreenRule(), "primary")
+    bAdd := CreateStyledButton(MainGui, btnX, y, 100, 36, "Добавить", (*) => AddScreenRule(), "primary")
     bAdd.SetBackdrop(THEME["card"])
     AddToGroup("Screenshots", bAdd)
 
-    bEdit := CreateStyledButton(MainGui, btnX, y+42, 100, 32, "Изменить", (*) => EditScreenRule(), "default")
+    bEdit := CreateStyledButton(MainGui, btnX, y+42, 100, 36, "Изменить", (*) => EditScreenRule(), "default")
     bEdit.SetBackdrop(THEME["card"])
     AddToGroup("Screenshots", bEdit)
 
-    bDel := CreateStyledButton(MainGui, btnX, y+84, 100, 32, "Удалить", (*) => DeleteScreenRule(), "default")
+    bDel := CreateStyledButton(MainGui, btnX, y+84, 100, 36, "Удалить", (*) => DeleteScreenRule(), "default")
     bDel.SetBackdrop(THEME["card"])
     AddToGroup("Screenshots", bDel)
     
@@ -815,11 +822,11 @@ BuildMainGui() {
     MainGui.AddText("x20 y" y " w920 h1 Background" THEME["border"], "")
     y += 15
     
-    CreateStyledButton(MainGui, 20, y, 150, 38, "Сброс настроек", (*) => ResetSettingsDefault(), "default").SetBackdrop(THEME["bg"])
-    CreateStyledButton(MainGui, 180, y, 150, 38, "Сброс статистики", (*) => ResetStats(), "default").SetBackdrop(THEME["bg"])
-    CreateStyledButton(MainGui, 340, y, 150, 38, "Удалить бинды", (*) => ClearAllBindsAction(), "danger").SetBackdrop(THEME["bg"])
+    CreateStyledButton(MainGui, 20, y, 150, 36, "Сброс настроек", (*) => ResetSettingsDefault(), "default").SetBackdrop(THEME["bg"])
+    CreateStyledButton(MainGui, 180, y, 150, 36, "Сброс статистики", (*) => ResetStats(), "default").SetBackdrop(THEME["bg"])
+    CreateStyledButton(MainGui, 340, y, 150, 36, "Удалить бинды", (*) => ClearAllBindsAction(), "danger").SetBackdrop(THEME["bg"])
 
-    g_BtnSaveSettings := CreateStyledButton(MainGui, 700, y, 240, 38, "Сохранить изменения", (*) => ApplyAndSaveSettings(), "primary")
+    g_BtnSaveSettings := CreateStyledButton(MainGui, 700, y, 240, 36, "Сохранить изменения", (*) => ApplyAndSaveSettings(), "primary")
     g_BtnSaveSettings.SetBackdrop(THEME["bg"])
     g_BtnSaveSettings.ctrl.SetFont("s8 bold", THEME["fontFamily"])
     UpdateButtonState(g_BtnSaveSettings, false)
@@ -981,8 +988,8 @@ BuildMainGui() {
     y := 675
     MainGui.AddText("x20 y" y " w920 h1 Background" THEME["border"], "")
     y += 15
-    CreateStyledButton(MainGui, 760, y, 180, 38, "Сбросить всё", (*) => ResetStats(), "danger").SetBackdrop(THEME["bg"])
-    CreateStyledButton(MainGui, 560, y, 180, 38, "Обновить", (*) => UpdateStatsDisplay(), "default").SetBackdrop(THEME["bg"])
+    CreateStyledButton(MainGui, 760, y, 180, 36, "Сбросить всё", (*) => ResetStats(), "danger").SetBackdrop(THEME["bg"])
+    CreateStyledButton(MainGui, 560, y, 180, 36, "Обновить", (*) => UpdateStatsDisplay(), "default").SetBackdrop(THEME["bg"])
     
     SwitchStatTab("Dashboard")
 
@@ -1133,7 +1140,7 @@ BuildMainGui() {
     AddToHelp("About", MainGui.AddText("x" (x+67) " y" (y+34) " w280 c" THEME["textMuted"] " BackgroundTrans", "MEDICAL OPERATIONS CONSOLE  ·  v" VERSION "  ·  " AUTHOR))
     
     y += 78
-    sepAbout := MainGui.AddText("x" x " y" y " w350 h1 Background" THEME["border"], "")
+    sepAbout := MainGui.AddText("x" x " y" y " w350 h1 Background" THEME["cardBorder"], "")
     AddToHelp("About", sepAbout)
     y += 20
     MainGui.SetFont("s10", THEME["fontFamily"])
@@ -1168,7 +1175,7 @@ BuildMainGui() {
     MainGui.AddLink("x" xIn " y" (y+5) " w180 c" THEME["accent"] " Background" THEME["card"], '<a href="https://vk.com/20max19">ВКонтакте</a>')
     
     y += 70
-    MainGui.AddText("x" xIn " y" y " w200 h1 Background" THEME["border"], "")
+    MainGui.AddText("x" xIn " y" y " w200 h1 Background" THEME["cardBorder"], "")
     y += 20
     
     MainGui.SetFont("s10 bold", THEME["fontFamily"])
@@ -1182,10 +1189,6 @@ BuildMainGui() {
     MainGui.SetFont("s10 bold", THEME["fontFamily"])
     MainGui.AddLink("x" xIn " y" (y+5) " w180 c" THEME["accent"] " Background" THEME["card"], '<a href="https://www.donationalerts.com/r/maxon3r">DonationAlerts</a>')
     
-    
-    ; --- ПОДВАЛ ---
-    y := 675
-    MainGui.AddText("x20 y" y " w920 h1 Background" THEME["border"], "")
     
     SwitchHelpTab("Overlay")
 
@@ -1217,27 +1220,18 @@ BuildMainGui() {
     MainGui.AddText("x" (SIDEBAR_W - 1) " y" TOPBAR_H " w1 h" (WIN_H - TOPBAR_H) " Background" THEME["border"], "")
 
     MainGui.SetFont("s7 bold", THEME["fontFamily"])
-    MainGui.AddText("x24 y76 w190 h14 c" THEME["textMuted"] " BackgroundTrans", "РАЗДЕЛЫ")
+    MainGui.AddText("x16 y76 w190 h14 c" THEME["textMuted"] " BackgroundTrans", "РАЗДЕЛЫ")
 
     global NavItems := []
     global NavActive := 1
     tabs.Choose(1)
 
     navLabels := [["Обзор", "▦"], ["Бинды", "▤"], ["Настройки", "⚙"], ["Статистика", "◔"], ["Помощь", "?"]]
-    navX := 12
-    navW := SIDEBAR_W - 24
+    navX := 14
+    navW := SIDEBAR_W - 28
     navItemH := 40
-    navStep := 46
+    navStep := 44
     navTop := 98
-    indW := 3
-    indH := 18
-
-    ; Тонкий вертикальный индикатор активного раздела (плавно скользит)
-    global NavInd := Map("y", navTop + (navItemH - indH) // 2, "h", indH)
-    global NavIndicator := MainGui.AddText("x2 y" NavInd["y"] " w" indW " h" indH " Background" THEME["accent"], "")
-    RoundCorners(NavIndicator, indW, indH, 1)
-    global NavAnimTimer := ""
-    global NavAnimData := ""
 
     for i, item in navLabels {
         act := (i = NavActive)
@@ -1249,18 +1243,18 @@ BuildMainGui() {
     }
 
     ; --- Нижний блок: состояние и глобальные действия ---
-    sysY := WIN_H - 190
-    MainGui.AddText("x24 y" sysY " w" (SIDEBAR_W - 48) " h1 Background" THEME["border"], "")
+    sysY := WIN_H - 186
+    MainGui.AddText("x" navX " y" sysY " w" navW " h1 Background" THEME["cardBorder"], "")
     MainGui.SetFont("s7 bold", THEME["fontFamily"])
-    MainGui.AddText("x24 y" (sysY + 18) " w190 h14 c" THEME["textMuted"] " BackgroundTrans", "СОХРАНЕНИЕ")
+    MainGui.AddText("x" (navX + 2) " y" (sysY + 20) " w190 h14 c" THEME["textMuted"] " BackgroundTrans", "СОХРАНЕНИЕ")
 
-    g_SaveStatus := StatusDot(MainGui, 24, sysY + 46, "Все изменения сохранены", THEME["success"], THEME["surface"], 8, 190, 8)
+    g_SaveStatus := StatusDot(MainGui, navX + 3, sysY + 48, "Все изменения сохранены", THEME["success"], THEME["surface"], 8, 186, 8)
 
-    g_BtnGlobalSave := CreateStyledButton(MainGui, navX, sysY + 76, navW, 36, "Сохранить изменения",
+    g_BtnGlobalSave := CreateStyledButton(MainGui, navX, sysY + 78, navW, 36, "Сохранить изменения",
         (*) => SaveEverything(), "primary", "Сохранить бинды и настройки")
     g_BtnGlobalSave.SetBackdrop(THEME["surface"])
 
-    CreateStyledButton(MainGui, navX, sysY + 120, navW, 32, "Отменить действие", (*) => Undo(), "default",
+    CreateStyledButton(MainGui, navX, sysY + 122, navW, 36, "Отменить действие", (*) => Undo(), "default",
         "Вернуть последнее изменение").SetBackdrop(THEME["surface"])
 
     if GlobalUnsavedChanges {
@@ -1271,35 +1265,8 @@ BuildMainGui() {
         UpdateSaveBar(false)
     }
 
-    AnimateNavIndicator(ind, targetY, aIndX, aIndW) {
-        global NavIndicator, NavAnimTimer, NavAnimData
-        if NavAnimTimer
-            SetTimer(NavAnimTimer, 0)
-        NavAnimData := Map(
-            "ind", ind, "targetY", targetY, "aIndX", aIndX, "aIndW", aIndW,
-            "fromY", ind["y"], "step", 0
-        )
-        NavAnimTimer := NavAnimTick
-        SetTimer(NavAnimTimer, 0)
-        SetTimer(NavAnimTimer, 12)
-    }
-
-    NavAnimTick() {
-        global NavIndicator, NavAnimTimer, NavAnimData
-        d := NavAnimData
-        d["step"]++
-        t := Min(1, d["step"] / 9)
-        e := 1 - (1 - t) ** 3      ; ease-out cubic — плавное скольжение
-        d["ind"]["y"] := Round(d["fromY"] + (d["targetY"] - d["fromY"]) * e)
-        try NavIndicator.Move(d["aIndX"], d["ind"]["y"], d["aIndW"], d["ind"]["h"])
-        if t >= 1 {
-            SetTimer(NavAnimTimer, 0)
-            NavAnimTimer := ""
-        }
-    }
-
     NavSelect(idx) {
-        global NavItems, NavActive, HoverButtons, MainGui, THEME, NavInd
+        global NavItems, NavActive, HoverButtons, MainGui, THEME
         if idx = NavActive
             return
         ToolTip(, , , 1)
@@ -1314,8 +1281,14 @@ BuildMainGui() {
             if IsObject(hb) && hb.HasOwnProp("isNav") && hb.isNav
                 hb.isHovered := false
         }
-        AnimateNavIndicator(NavInd, navTop + (idx - 1) * navStep + (navItemH - indH) // 2, 2, indW)
     }
+}
+
+; Крестик в шапке закрывает приложение. Если есть несохранённые изменения,
+; ExitHandler (OnExit) сам предложит их сохранить.
+CloseApplication(*) {
+    try ToolTip(, , , 1)
+    ExitApp()
 }
 
 ClearSearch(*) {
@@ -1626,7 +1599,7 @@ GetPatientFormatLabel() {
 
 ; Верхний ряд показателей на «Обзоре».
 UpdateDashboardCards() {
-    global MainGui, STATE, STATS, CFG, THEME
+    global MainGui, STATE, STATS, CFG, THEME, g_KpiPatientDot, g_KpiSaveDot
 
     if !MainGui
         return
@@ -1638,7 +1611,9 @@ UpdateDashboardCards() {
         MainGui["KpiPatient"].Text := hasPatient ? STATE["patientId"] : "—"
         MainGui["KpiPatient"].Opt("c" (hasPatient ? THEME["accent"] : THEME["textMuted"]))
         MainGui["KpiPatient"].Redraw()
-        MainGui["KpiPatientSub"].Text := hasPatient ? "сессия активна" : "сессия не начата"
+        if IsObject(g_KpiPatientDot)
+            g_KpiPatientDot.Set(hasPatient ? "сессия активна" : "сессия не начата",
+                hasPatient ? THEME["success"] : THEME["textMuted"])
 
         MainGui["KpiBinds"].Text := total
         MainGui["KpiBindsSub"].Text := "активных: " active
@@ -1648,9 +1623,11 @@ UpdateDashboardCards() {
         MainGui["KpiSave"].Text := CFG["autoSave"] ? "Вкл" : "Выкл"
         MainGui["KpiSave"].Opt("c" (CFG["autoSave"] ? THEME["success"] : THEME["textMuted"]))
         MainGui["KpiSave"].Redraw()
-        MainGui["KpiSaveSub"].Text := STATE["lastAutoSave"] != ""
-            ? "последнее в " FormatTime(STATE["lastAutoSave"], "HH:mm")
-            : "интервал " CFG["autoSaveInterval"] " сек"
+        if IsObject(g_KpiSaveDot)
+            g_KpiSaveDot.Set(STATE["lastAutoSave"] != ""
+                ? "последнее в " FormatTime(STATE["lastAutoSave"], "HH:mm")
+                : "интервал " CFG["autoSaveInterval"] " сек",
+                CFG["autoSave"] ? THEME["success"] : THEME["textMuted"])
     }
 
     try MainGui["DashGreeting"].Text := GetGreetingText()

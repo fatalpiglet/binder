@@ -800,6 +800,7 @@ ShowRuleEditor(editIndex := 0) {
     
     ; Центрирование
     RuleEditorGui.Show("w" w " h" h)
+    try RoundCorners(RuleEditorGui, w, h, THEME["radiusWin"])
     WinGetPos(,, &ww, &wh, RuleEditorGui.Hwnd)
     RuleEditorGui.Move((A_ScreenWidth - ww) // 2, (A_ScreenHeight - wh) // 2)
 }

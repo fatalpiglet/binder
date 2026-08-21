@@ -287,6 +287,7 @@ ShowModernFilterMenu(*) {
     }
 
     FilterPopupGui.Show("x" menuX " y" menuY " w" w " h" (y + 4) " NA")
+    try RoundCorners(FilterPopupGui, w, y + 4, THEME["radius"])
 }
 
 ApplyModernFilter(name) {

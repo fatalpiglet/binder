@@ -48,8 +48,8 @@ class StyledBtn {
 
     ApplyShape() {
         global THEME
-        ; Умеренный радиус (6–12px) вместо «таблеток»: профессионально, не mobile SaaS.
-        this.radius := Max(6, Min(THEME["radiusLg"], this.h // 3))
+        ; Единый радиус кнопок: 8–10px (без «таблеток» и случайных значений).
+        this.radius := Max(8, Min(THEME["radius"], this.h // 3))
         ; Region отвечает только за прозрачные углы. Видимый контур рисуется
         ; внутри него с отступом, поэтому ступенчатый край маски не подсвечен.
         try RoundCorners(this.ctrl, this.w, this.h, this.radius + 2)
@@ -114,7 +114,9 @@ class StyledBtn {
             case "success", "green", "ok", "save":
                 return {bg: "0f2a20", hover: "143528", pressed: "0d2119", border: "1f5c44", borderHover: "35c98a", text: "9fe6c4", glow: ""}
             case "danger", "red", "delete", "error":
-                return {bg: "24141a", hover: "301a22", pressed: "1e1116", border: "5a2a37", borderHover: "e66b83", text: "efb0bc", glow: ""}
+                ; Тёмная кнопка; красный акцент появляется только при наведении.
+                return {bg: "111722", hover: "1b1620", pressed: "0e141d", border: "202833", borderHover: "6e3543"
+                    , text: "dfe4ec", textHover: "eda9b6", glow: ""}
             case "info", "blue":
                 ; Нейтральная «прохладная» кнопка: без заливки cyan.
                 return {bg: "111722", hover: "16202c", pressed: "0e141d", border: "22303f", borderHover: "3c5670", text: "dde3ea", glow: ""}
@@ -184,7 +186,10 @@ class StyledBtn {
             ToolTip(, , , 1)
         }
         target := state ? this.colors.hover : this.colors.bg
-        this.ApplyVisual(target, this.colors.text)
+        textColor := this.colors.text
+        if (state && IsObject(this.colors) && this.colors.HasOwnProp("textHover") && this.colors.textHover != "")
+            textColor := this.colors.textHover
+        this.ApplyVisual(target, textColor)
         try DllCall("user32\SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", state ? 32649 : 32512, "Ptr"))
     }
 }
@@ -276,8 +281,8 @@ DrawStyledButton(wParam, lParam, msg, hwnd) {
     if (glowColor != "" && btn.isClickable) {
         hollow := DllCall("gdi32\GetStockObject", "Int", 5, "Ptr") ; NULL_BRUSH
         prevBrush := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", hollow, "Ptr")
-        DrawGlowRing(hdc, left, top, right, bottom, diameter + 4, BlendHex(backdrop, glowColor, 0.12))
-        DrawGlowRing(hdc, left + 1, top + 1, right - 1, bottom - 1, diameter + 2, BlendHex(backdrop, glowColor, 0.26))
+        DrawGlowRing(hdc, left, top, right, bottom, diameter + 4, BlendHex(backdrop, glowColor, 0.09))
+        DrawGlowRing(hdc, left + 1, top + 1, right - 1, bottom - 1, diameter + 2, BlendHex(backdrop, glowColor, 0.19))
         DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", prevBrush)
     }
 
@@ -495,7 +500,7 @@ class InputField {
         ; (то есть невидимо) — так надёжнее, чем прятать контрол: переключение
         ; вкладок в AHK может заново показать скрытые контролы страницы.
         this.glowOff := this.backdrop
-        this.glowOn := BlendHex(this.backdrop, THEME["accent"], 0.16)
+        this.glowOn := BlendHex(this.backdrop, THEME["accent"], 0.13)
         this.glowRing := parent.AddText("x" (x - 2) " y" (y - 2) " w" (w + 4) " h" (h + 4)
             " Background" this.glowOff, "")
         RoundCorners(this.glowRing, w + 4, h + 4, r + 2)
@@ -632,7 +637,7 @@ class CardGlow {
         this.active := false
         ; Внутреннее кольцо создаём первым: после SendPanelToBack оно окажется
         ; выше внешнего, и оба — под карточкой.
-        for spec in [[2, 0.20], [5, 0.09]] {
+        for spec in [[2, 0.16], [5, 0.07]] {
             pad := spec[1], k := spec[2]
             ring := parent.AddText("x" (x - pad) " y" (y - pad) " w" (w + pad * 2) " h" (h + pad * 2)
                 " Background" this.backdrop, "")
@@ -661,10 +666,10 @@ CreateCardHeader(parent, x, y, w, title, note := "", pad := 0) {
     global THEME
     if !pad
         pad := THEME["cardPad"]
-    t := parent.AddText("x" (x + pad) " y" (y + 16) " w" (w - pad * 2 - 110) " h20 BackgroundTrans c" THEME["text"], title)
+    t := parent.AddText("x" (x + pad) " y" (y + 18) " w" (w - pad * 2 - 110) " h20 BackgroundTrans c" THEME["text"], title)
     t.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
     if note != "" {
-        n := parent.AddText("x" (x + w - pad - 110) " y" (y + 19) " w110 h16 Right BackgroundTrans c" THEME["textMuted"], note)
+        n := parent.AddText("x" (x + w - pad - 110) " y" (y + 21) " w110 h16 Right BackgroundTrans c" THEME["textMuted"], note)
         n.SetFont("s" THEME["fontMeta"] " norm", THEME["fontFamily"])
     }
     return t
@@ -680,10 +685,10 @@ class StatusDot {
         color := color = "" ? THEME["textMuted"] : color
         this.color := color
 
-        ; Мягкое гало вокруг точки (очень слабое, без ярких плашек).
-        this.halo := parent.AddText("x" (x - 3) " y" (y - 3) " w" (size + 6) " h" (size + 6)
-            " Background" BlendHex(this.backdrop, color, 0.28), "")
-        RoundCorners(this.halo, size + 6, size + 6, (size + 6) // 2)
+        ; Очень слабое гало: ровно одно кольцо в 2px, без пятен и ярких плашек.
+        this.halo := parent.AddText("x" (x - 2) " y" (y - 2) " w" (size + 4) " h" (size + 4)
+            " Background" BlendHex(this.backdrop, color, 0.22), "")
+        RoundCorners(this.halo, size + 4, size + 4, (size + 4) // 2)
 
         this.dot := parent.AddText("x" x " y" y " w" size " h" size " Background" color, "")
         RoundCorners(this.dot, size, size, size // 2)
@@ -698,7 +703,7 @@ class StatusDot {
             color := this.color
         this.color := color
         try {
-            this.halo.Opt("Background" BlendHex(this.backdrop, color, 0.28))
+            this.halo.Opt("Background" BlendHex(this.backdrop, color, 0.22))
             this.halo.Redraw()
         }
         try {

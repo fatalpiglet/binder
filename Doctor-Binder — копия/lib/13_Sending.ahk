@@ -30,15 +30,15 @@ ShowCustomBindMenu(slotIdx, mouseX, mouseY) {
     y := 12
     
     ; Заголовок
-    ContextMenuGui.SetFont("s9 bold", "Segoe UI")
+    ContextMenuGui.SetFont("s9 bold", THEME["fontFamily"])
     name := slot["name"] = "" ? "(Пустой слот)" : SubStr(slot["name"], 1, 28)
-    ContextMenuGui.AddText("x16 y" y " w" (w-32) " c" THEME["accent"], name)
-    y += 28
-    
-    ContextMenuGui.AddText("x12 y" y " w" (w-24) " h2 Background" THEME["borderGlow"], "")
+    ContextMenuGui.AddText("x16 y" y " w" (w-32) " c" THEME["text"] " BackgroundTrans", name)
+    y += 26
+
+    ContextMenuGui.AddText("x12 y" y " w" (w-24) " h1 Background" THEME["cardBorder"], "")
     y += 10
-    
-    ContextMenuGui.SetFont("s9 norm", "Segoe UI")
+
+    ContextMenuGui.SetFont("s9 norm", THEME["fontFamily"])
     
     menuItems := []
     
@@ -63,8 +63,10 @@ ShowCustomBindMenu(slotIdx, mouseX, mouseY) {
         
         callback := ((act, i) => (*) => ExecuteCustomAction(act, i))(itemAction, idx)
         
-        rowBtn := CreateStyledButton(ContextMenuGui, 8, y+2, w-16, 28, item["text"], callback, "default")
-        rowBtn.SetVisual(THEME["bg"], item["color"], THEME["bgHover"])
+        rowBtn := CreateStyledButton(ContextMenuGui, 8, y+2, w-16, 30, item["text"], callback, "default")
+        rowBtn.SetBackdrop(THEME["bg"])
+        rowBtn.SetVisual(THEME["bg"], item["color"], THEME["bgHover"], THEME["bg"])
+        rowBtn.SetLayout("left", "")
         row := rowBtn.ctrl
         txt := rowBtn.ctrl
         
@@ -74,6 +76,7 @@ ShowCustomBindMenu(slotIdx, mouseX, mouseY) {
     y += 10
     
     ContextMenuGui.Show("x" mouseX " y" mouseY " w" w " h" y)
+    try RoundCorners(ContextMenuGui, w, y, THEME["radius"])
     
     ; Запускаем таймер для проверки фокуса (вместо OnMessage/LoseFocus)
     SetTimer(CheckMenuFocus, 100)

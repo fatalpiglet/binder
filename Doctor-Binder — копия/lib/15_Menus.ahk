@@ -240,7 +240,7 @@ ShowBindSelector(cfgKey, btnName) {
     SetDarkControl(lvSel)
     
     ; Колонка 215px (чтобы влез скролл)
-    lvSel.ModifyCol(1, 215) 
+    lvSel.ModifyCol(1, 210) 
     
     lvSel.Add("", "— Очистить слот —", 0)
     
@@ -253,9 +253,10 @@ ShowBindSelector(cfgKey, btnName) {
     
     lvSel.OnEvent("DoubleClick", (*) => ApplySelectorSelection(lvSel, cfgKey, btnName))
     
-    CreateStyledButton(BindSelectorGui, 5, 280, 240, 30, "Отмена", (*) => BindSelectorGui.Destroy(), "danger")
-    
-    BindSelectorGui.Show("x" mx " y" my " w250 h315 NA")
+    CreateStyledButton(BindSelectorGui, 8, 292, 234, 36, "Отмена", (*) => BindSelectorGui.Destroy(), "default").SetBackdrop(THEME["bg"])
+
+    BindSelectorGui.Show("x" mx " y" my " w250 h340 NA")
+    try RoundCorners(BindSelectorGui, 250, 340, THEME["radiusWin"])
     
     ; Убираем гориз. скролл
     try DllCall("ShowScrollBar", "Ptr", lvSel.Hwnd, "Int", 0, "Int", 0)

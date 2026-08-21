@@ -25,7 +25,7 @@
        display:flex;align-items:center;padding:0 16px 0 20px;gap:12px;flex:none}
   .brand{width:32px;height:32px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
          display:grid;place-items:center;font-size:17px;box-shadow:0 0 0 1px #16303c}
-  .brand-txt b{display:block;font-size:15px;color:var(--text);font-weight:700;line-height:1.1}
+  .brand-txt b{display:block;font-size:16px;color:var(--text);font-weight:700;line-height:1.1}
   .brand-txt span{display:block;font-size:9.5px;color:var(--muted);margin-top:3px}
   .top-right{margin-left:auto;display:flex;align-items:center;gap:16px}
   .tstat{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
@@ -49,14 +49,13 @@
          color:var(--dim);font-size:13px;text-decoration:none;border:1px solid transparent}
   .nav a i{font-style:normal;width:16px;text-align:center;color:var(--muted);font-size:14px}
   .nav a.active{background:var(--selected);border-color:var(--accent-dark);color:var(--accent);font-weight:600;
-                box-shadow:0 0 0 3px rgba(56,189,248,.06)}
+                box-shadow:0 0 0 3px rgba(56,189,248,.05)}
   .nav a.active i{color:var(--accent)}
-  .ind{position:absolute;left:2px;top:98px;width:3px;height:18px;background:var(--accent);border-radius:2px}
   .side-bottom{margin-top:auto;display:flex;flex-direction:column;gap:12px}
   .side-sep{height:1px;background:var(--border);margin:0 12px}
   .btn{height:36px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:#E6EAF0;
        display:flex;align-items:center;justify-content:center;font-size:12.5px}
-  .btn.primary{background:#0E2A37;border-color:var(--accent-dark);color:#CFEEFF;box-shadow:0 0 0 3px rgba(56,189,248,.07)}
+  .btn.primary{background:#0E2A37;border-color:var(--accent-dark);color:#CFEEFF;box-shadow:0 0 0 3px rgba(56,189,248,.06)}
   .btn.left{justify-content:space-between;padding:0 15px}
   .btn.left span{color:var(--muted);font-size:13px}
   .btn.sub{color:var(--muted);background:var(--surface)}
@@ -70,22 +69,24 @@
   .card::before{content:"";position:absolute;left:12px;right:12px;top:0;height:1px;background:rgba(255,255,255,.04)}
   .kpi{padding:14px 16px 12px}
   .kpi .lbl{font-size:11px;color:var(--dim)}
-  .kpi .val{font-size:23px;font-weight:700;margin-top:6px;line-height:1.15}
-  .kpi .sub2{font-size:11px;color:var(--muted);margin-top:6px}
+  .kpi .val{font-size:25px;font-weight:700;margin-top:6px;line-height:1.15}
+  .kpi .sub2{font-size:10.5px;color:var(--muted);margin-top:7px}
+  .kpi .sub2.dot{display:inline-flex}
+  .kpi .sub2.dot::before{width:6px;height:6px}
   .grid2{display:grid;grid-template-columns:596px 308px;gap:16px;margin-top:20px}
   .ch{display:flex;align-items:baseline;justify-content:space-between;padding:16px 20px 0}
   .ch b{font-size:13.5px;font-weight:600}
   .ch i{font-style:normal;font-size:11px;color:var(--muted)}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:14px 20px 0}
   .lab{font-size:10.5px;color:var(--dim);margin-bottom:6px}
-  .input{height:34px;border-radius:6px;background:var(--field);border:1px solid var(--field-border);
+  .input{height:34px;border-radius:8px;background:var(--field);border:1px solid var(--field-border);
          display:flex;align-items:center;padding:0 11px;font-size:13px}
-  .input.focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.13)}
+  .input.focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.11)}
   .input.big{height:44px;justify-content:center;font-family:var(--mono);font-size:19px;color:var(--accent);letter-spacing:.08em}
   .row{display:flex;gap:6px}
   .row .btn{flex:1}
   .pad{padding:0 20px}
-  .glow{box-shadow:0 0 0 2px rgba(56,189,248,.10), 0 0 0 5px rgba(56,189,248,.05)}
+  .glow{box-shadow:0 0 0 2px rgba(56,189,248,.08), 0 0 0 5px rgba(56,189,248,.04)}
   .kv{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);padding:6px 20px}
   .kv b{font-family:var(--mono);font-weight:600;color:var(--muted)}
   .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:14px 20px 0}
@@ -97,7 +98,7 @@
 <div class="app">
   <div class="top">
     <div class="brand">✚</div>
-    <div class="brand-txt"><b>Doctor Binder</b><span>Медицинская консоль · v2.1</span></div>
+    <div class="brand-txt"><b>Doctor Binder</b></div>
     <div class="top-right">
       <div class="tstat">
         <div class="dot ok">Система готова</div>
@@ -109,7 +110,6 @@
 
   <div class="body">
     <div class="side">
-      <div class="ind"></div>
       <div class="tech">РАЗДЕЛЫ</div>
       <div class="nav">
         <a class="active"><i>▦</i>Обзор</a>
@@ -132,10 +132,10 @@
       <div class="sub">Рабочая область готова. Ниже — состояние смены.</div>
 
       <div class="kpis">
-        <div class="card kpi"><div class="lbl">Текущий пациент</div><div class="val" style="color:var(--accent)">4721</div><div class="sub2">сессия активна</div></div>
+        <div class="card kpi"><div class="lbl">Текущий пациент</div><div class="val" style="color:var(--accent)">4721</div><div class="sub2 dot ok" style="color:var(--success)">сессия активна</div></div>
         <div class="card kpi"><div class="lbl">Биндов в наборе</div><div class="val">24</div><div class="sub2">активных: 18</div></div>
         <div class="card kpi"><div class="lbl">Отправлено строк</div><div class="val">137</div><div class="sub2">за текущую сессию</div></div>
-        <div class="card kpi"><div class="lbl">Автосохранение</div><div class="val" style="color:var(--success)">Вкл</div><div class="sub2">последнее в 21:04</div></div>
+        <div class="card kpi"><div class="lbl">Автосохранение</div><div class="val" style="color:var(--success)">Вкл</div><div class="sub2 dot ok" style="color:var(--success)">последнее в 21:04</div></div>
       </div>
 
       <div class="grid2">
