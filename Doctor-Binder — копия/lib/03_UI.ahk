@@ -945,6 +945,162 @@ class DarkSelect {
     }
 }
 
+; Компактный список строк бинда (замена Windows ListView в редакторе).
+; API совместим с вызовами Add / Modify / Delete / GetCount / Opt / OnEvent.
+class EditorLineList {
+    __New(parent, x, y, w, h, onSelect := "") {
+        global THEME
+        this.parent := parent
+        this.x := x, this.y := y, this.w := w, this.h := h
+        this.onSelect := onSelect
+        this.items := []
+        this.selected := 0
+        this.offset := 0
+        this.redrawLock := false
+        this.rowH := 38
+        this.gap := 6
+        this.capacity := Max(1, Integer((h + this.gap) / (this.rowH + this.gap)))
+        this.slots := []
+        Loop this.capacity {
+            iy := y + (A_Index - 1) * (this.rowH + this.gap)
+            btn := CreateStyledButton(parent, x, iy, w, this.rowH, "",
+                ((idx) => (*) => this.ClickSlot(idx))(A_Index), "default")
+            btn.SetBackdrop(THEME["card"])
+            btn.SetLayout("left", "")
+            btn.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+            btn.radius := 8
+            try RoundCorners(btn.ctrl, w, this.rowH, 8)
+            this.slots.Push(btn)
+        }
+        this.Paint()
+    }
+
+    GetCount() {
+        return this.items.Length
+    }
+
+    Opt(opt := "") {
+        if InStr(opt, "-Redraw")
+            this.redrawLock := true
+        else if InStr(opt, "+Redraw") {
+            this.redrawLock := false
+            this.Paint()
+        }
+    }
+
+    OnEvent(ev, cb) {
+        if (ev = "ItemSelect")
+            this.onSelect := cb
+    }
+
+    Add(opts := "", col1 := "", col2 := "", col3 := "") {
+        this.items.Push({num: col1, text: col2, delay: col3})
+        if !this.redrawLock
+            this.Paint()
+    }
+
+    Delete(row := 0) {
+        if (row = 0)
+            this.items := []
+        else if (row >= 1 && row <= this.items.Length)
+            this.items.RemoveAt(row)
+        if (this.selected > this.items.Length)
+            this.selected := this.items.Length
+        if !this.redrawLock
+            this.Paint()
+    }
+
+    Modify(row, colSpec := "", value := "") {
+        if (row < 1 || row > this.items.Length)
+            return
+        spec := String(colSpec)
+        if (InStr(spec, "Select") || InStr(spec, "Focus")) {
+            this.Select(row)
+            return
+        }
+        if (spec = "Col2")
+            this.items[row].text := value
+        else if (spec = "Col3")
+            this.items[row].delay := value
+        else if (spec = "")
+            this.items[row].num := value
+        if !this.redrawLock
+            this.Paint()
+    }
+
+    ClickSlot(slotIdx) {
+        row := this.offset + slotIdx
+        if (row < 1 || row > this.items.Length)
+            return
+        this.Select(row)
+    }
+
+    Select(row) {
+        this.selected := row
+        if (row > this.offset + this.capacity)
+            this.offset := row - this.capacity
+        if (row <= this.offset)
+            this.offset := row - 1
+        if (this.offset < 0)
+            this.offset := 0
+        this.Paint()
+        if this.onSelect
+            try this.onSelect.Call(this, row, true)
+    }
+
+    FormatDelay(raw) {
+        if (raw = "" || raw = "—")
+            return "—"
+        if !IsNumber(raw)
+            return raw
+        n := Integer(raw)
+        if (n <= 0)
+            return "—"
+        sec := n / 1000
+        if (Mod(n, 1000) = 0)
+            return Integer(sec) " с"
+        return Format("{:.1f} с", sec)
+    }
+
+    ClipText(text, maxLen := 28) {
+        t := Trim(String(text))
+        if (StrLen(t) <= maxLen)
+            return t
+        return SubStr(t, 1, maxLen - 1) "…"
+    }
+
+    Paint() {
+        global THEME
+        maxOff := Max(0, this.items.Length - this.capacity)
+        if (this.offset > maxOff)
+            this.offset := maxOff
+        Loop this.capacity {
+            btn := this.slots[A_Index]
+            row := this.offset + A_Index
+            if (row > this.items.Length) {
+                btn.ctrl.Text := ""
+                btn.SetVisual(THEME["card"], THEME["card"], THEME["card"], THEME["card"])
+                btn.SetLayout("left", "")
+                btn.isClickable := false
+                continue
+            }
+            item := this.items[row]
+            num := Format("{:02}", Integer(item.num != "" ? item.num : row))
+            btn.ctrl.Text := num "   " this.ClipText(item.text)
+            btn.isClickable := true
+            active := (row = this.selected)
+            if active {
+                btn.SetVisual(THEME["bgSelected"], THEME["text"], THEME["bgSelected"], THEME["accent"], THEME["accent"])
+                btn.ctrl.SetFont("s9 bold", THEME["fontFamily"])
+            } else {
+                btn.SetVisual("0d1117", THEME["text"], "121820", "232a36")
+                btn.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+            }
+            btn.SetLayout("left", this.FormatDelay(item.delay))
+        }
+    }
+}
+
 ; Очень мягкое свечение вокруг карточки (активное состояние).
 ; Кольца всегда существуют, но в покое окрашены в цвет подложки.
 class CardGlow {
