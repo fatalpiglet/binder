@@ -144,10 +144,10 @@ CreateNewFilter() {
     filterGui.BackColor := THEME["bg"]
     filterGui.SetFont("s10 c" THEME["text"], THEME["fontFamily"])
     
-    CreateFieldLabel(filterGui, 20, 20, 100, "НАЗВАНИЕ")
+    CreateFieldLabel(filterGui, 20, 20, 100, "Название")
     CreateInput(filterGui, 20, 38, 320, THEME["inputH"], "vNewFilterName", "", 10, THEME["bg"])
 
-    CreateFieldLabel(filterGui, 20, 84, 100, "УСЛОВИЕ")
+    CreateFieldLabel(filterGui, 20, 84, 100, "Условие")
     CreateInput(filterGui, 20, 102, 320, THEME["inputH"], "vNewFilterCondition", "category=", 10, THEME["bg"])
     
     filterGui.SetFont("s8", THEME["fontFamily"])

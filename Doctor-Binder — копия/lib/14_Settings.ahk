@@ -10,7 +10,7 @@ ApplyAndSaveSettings(*) {
     
     ; === 1. ВИЗУАЛЬНЫЙ ЭФФЕКТ (МГНОВЕННЫЙ ОТКЛИК) ===
     if g_BtnSaveSettings {
-        g_BtnSaveSettings.ctrl.Text := "СОХРАНЕНИЕ…"
+        g_BtnSaveSettings.ctrl.Text := "Сохранение…"
         try g_BtnSaveSettings.SetVisual(THEME["bgElevated"], THEME["textDim"], THEME["bgElevated"], THEME["border"])
         g_BtnSaveSettings.ctrl.Redraw()
         Sleep(50) ; Даем Windows время перерисовать кнопку перед нагрузкой
@@ -58,7 +58,7 @@ ApplyAndSaveSettings(*) {
     ; === 5. СБРОС КНОПКИ (УСПЕХ) ===
     if g_BtnSaveSettings {
         UpdateButtonState(g_BtnSaveSettings, false)
-        g_BtnSaveSettings.ctrl.Text := "СОХРАНЕНО"
+        g_BtnSaveSettings.ctrl.Text := "Сохранено"
         g_BtnSaveSettings.ctrl.Redraw()
         
         ; Через 1.5 сек возвращаем обычный текст
@@ -75,7 +75,7 @@ ApplyAndSaveSettings(*) {
 RestoreSettingsBtnText() {
     global g_BtnSaveSettings, THEME
     if g_BtnSaveSettings {
-        g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+        g_BtnSaveSettings.ctrl.Text := "Сохранить изменения"
         ; Нет изменений — кнопка приглушена (disabled-состояние дизайн-системы)
         try g_BtnSaveSettings.SetEnabledStyle(false)
         g_BtnSaveSettings.ctrl.Redraw()
@@ -118,7 +118,7 @@ SaveEverything() {
     ; 1. ВИЗУАЛЬНЫЙ ЭФФЕКТ
     if g_BtnGlobalSave {
         UpdateButtonState(g_BtnGlobalSave, true, "primary")
-        g_BtnGlobalSave.ctrl.Text := "СОХРАНЕНИЕ…"
+        g_BtnGlobalSave.ctrl.Text := "Сохранение…"
         g_BtnGlobalSave.ctrl.Redraw()
         Sleep(50) ; <-- ВАЖНО: Дать время на отрисовку
     }
@@ -145,7 +145,7 @@ SaveEverything() {
     if g_BtnGlobalSave {
         ; Выключаем кнопку (делаем серой)
         UpdateButtonState(g_BtnGlobalSave, false)
-        g_BtnGlobalSave.ctrl.Text := "СОХРАНЕНО"
+        g_BtnGlobalSave.ctrl.Text := "Сохранено"
         
         ; Через 2 секунды возвращаем обычный текст
         SetTimer(() => TryRestoreButtonText(), -2000)
@@ -158,7 +158,7 @@ SaveEverything() {
 TryRestoreButtonText() {
     global g_BtnGlobalSave, GlobalUnsavedChanges
     if IsObject(g_BtnGlobalSave) && !GlobalUnsavedChanges
-        g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ"
+        g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
 }
 
 
@@ -687,7 +687,7 @@ DeleteScreenRule() {
     try {
         if g_BtnSaveSettings {
             g_BtnSaveSettings.isClickable := true
-            g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            g_BtnSaveSettings.ctrl.Text := "Сохранить изменения"
             try g_BtnSaveSettings.SetEnabledStyle(true, "primary")
             g_BtnSaveSettings.ctrl.Redraw()
         }
@@ -725,7 +725,7 @@ SaveRuleFromGui(gui, editIndex) {
     try {
         if g_BtnSaveSettings {
             g_BtnSaveSettings.isClickable := true
-            g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            g_BtnSaveSettings.ctrl.Text := "Сохранить изменения"
             try g_BtnSaveSettings.SetEnabledStyle(true, "primary")
             g_BtnSaveSettings.ctrl.Redraw()
         }
@@ -779,15 +779,15 @@ ShowRuleEditor(editIndex := 0) {
     inputW := 390
 
     ; --- ПОЛЯ ВВОДА ---
-    CreateFieldLabel(RuleEditorGui, x, y, 300, "НАЗВАНИЕ ПАПКИ")
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "Название папки")
     CreateInput(RuleEditorGui, x, y+18, inputW, THEME["inputH"], "vRuleName", data["name"], 10, THEME["bg"])
 
     y += 76
-    CreateFieldLabel(RuleEditorGui, x, y, 300, "ФРАЗА В ЧАТЕ (ТРИГГЕР)")
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "Фраза в чате (триггер)")
     CreateInput(RuleEditorGui, x, y+18, inputW, THEME["inputH"], "vRulePhrase", data["phrase"], 10, THEME["bg"])
 
     y += 76
-    CreateFieldLabel(RuleEditorGui, x, y, 300, "ПУТЬ СОХРАНЕНИЯ")
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "Путь сохранения")
     CreateInput(RuleEditorGui, x, y+18, inputW-46, THEME["inputH"], "ReadOnly vRulePath", data["path"], 9, THEME["bg"])
     CreateStyledButton(RuleEditorGui, x+inputW-40, y+18, 40, THEME["inputH"], "…", (*) => BrowseRuleFolder(RuleEditorGui), "default").SetBackdrop(THEME["bg"])
 
@@ -796,7 +796,7 @@ ShowRuleEditor(editIndex := 0) {
     RuleEditorGui.AddText("x20 y" (y-16) " w" (w-40) " h1 Background" THEME["border"], "")
 
     CreateStyledButton(RuleEditorGui, 20, y, 190, 40, "Отмена", (*) => RuleEditorGui.Destroy(), "default").SetBackdrop(THEME["bg"])
-    CreateStyledButton(RuleEditorGui, 230, y, 190, 40, "СОХРАНИТЬ", (*) => SaveRuleFromGui(RuleEditorGui, editIndex), "primary").SetBackdrop(THEME["bg"])
+    CreateStyledButton(RuleEditorGui, 230, y, 190, 40, "Сохранить", (*) => SaveRuleFromGui(RuleEditorGui, editIndex), "primary").SetBackdrop(THEME["bg"])
     
     ; Центрирование
     RuleEditorGui.Show("w" w " h" h)

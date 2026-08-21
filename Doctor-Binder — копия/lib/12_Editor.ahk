@@ -67,11 +67,11 @@ OpenBindEditor(slotNum) {
 
     yRow := yInfo + 36
     xIn := xCard + 20
-    CreateFieldLabel(EditorGui, xIn, yRow - 20, 200, "НАЗВАНИЕ БИНДА")
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 200, "Название бинда")
     CreateInput(EditorGui, xIn, yRow, 250, THEME["inputH"], "vEditorName", slot["name"], 10)
     xIn += 270
 
-    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "ГОРЯЧАЯ КЛАВИША")
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "Горячая клавиша")
     hkDisplay := slot["hotkey"] = "" ? "Нажмите…" : FormatHotkey(slot["hotkey"])
     hkColor := slot["hotkey"] = "" ? THEME["textMuted"] : THEME["accent"]
     EditorKeyButton := CreateStyledButton(EditorGui, xIn, yRow, 130, THEME["inputH"], hkDisplay, (*) => EditorStartCapture(), "default")
@@ -83,13 +83,13 @@ OpenBindEditor(slotNum) {
     EditorGui.AddEdit("x0 y0 w0 h0 Hidden vEditorHotkey", slot["hotkey"])
     xIn += 150
 
-    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "КАТЕГОРИЯ")
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "Категория")
     EditorGui.SetFont("s9", THEME["fontFamily"])
     categoryBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w130 h" THEME["inputH"] " vEditorCategory Choose1 Background" THEME["field"] " c" THEME["text"], ["Основные", "Лечение", "Медосмотр", "Вакцины", "Операции", "Быстрые", "Утилиты"])
     SetDarkControl(categoryBox)
     xIn += 150
 
-    CreateFieldLabel(EditorGui, xIn, yRow - 20, 120, "В СТАТИСТИКУ")
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 120, "В статистику")
     EditorGui.SetFont("s9", THEME["fontFamily"])
     statBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w120 h" THEME["inputH"] " vEditorStatTypeVisible Choose1 Background" THEME["field"] " c" THEME["text"], ["—", "Таблетки", "Уколы", "Операции", "Медкарты", "Вакцины"])
     SetDarkControl(statBox)
@@ -114,7 +114,7 @@ OpenBindEditor(slotNum) {
 
     ; --- ЛЕВАЯ: СТРОКИ ---
     EditorGui.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
-    EditorGui.AddText("x" (xCard+18) " y" (yMain+16) " w200 c" THEME["text"] " BackgroundTrans", "СТРОКИ БИНДА")
+    EditorGui.AddText("x" (xCard+18) " y" (yMain+16) " w200 c" THEME["text"] " BackgroundTrans", "Строки бинда")
     EditorGui.SetFont("s8", THEME["fontFamily"])
     EditorGui.AddText("x" (xCard+leftW-125) " y" (yMain+19) " w105 Right c" THEME["textDim"] " BackgroundTrans vEditorLineCount", slot["lines"].Length " строк")
 
@@ -146,19 +146,19 @@ OpenBindEditor(slotNum) {
 
     ; --- ПРАВАЯ: РЕДАКТИРОВАНИЕ ---
     EditorGui.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
-    EditorGui.AddText("x" (xRight+18) " y" (yMain+16) " w220 c" THEME["text"] " BackgroundTrans", "РЕДАКТИРОВАНИЕ")
+    EditorGui.AddText("x" (xRight+18) " y" (yMain+16) " w220 c" THEME["text"] " BackgroundTrans", "Редактирование")
     EditorGui.SetFont("s8", THEME["fontFamily"])
     EditorGui.AddText("x" (xRight+rightW-150) " y" (yMain+19) " w130 Right c" THEME["textDim"] " BackgroundTrans vEditorRowLabel", "Строка не выбрана")
 
     yTags := yMain + 52
-    CreateFieldLabel(EditorGui, xRight+18, yTags+9, 40, "ТЕГИ")
+    CreateFieldLabel(EditorGui, xRight+18, yTags+9, 40, "Теги")
     CreateOutlineBtn(EditorGui, xRight+62, yTags, 48, 30, "{P}", (*) => EditorInsertTag("{P}"), "default").SetBackdrop(THEME["card"])
     CreateOutlineBtn(EditorGui, xRight+116, yTags, 58, 30, "{MY}", (*) => EditorInsertTag("{MY}"), "default").SetBackdrop(THEME["card"])
     CreateOutlineBtn(EditorGui, xRight+180, yTags, 72, 30, "{HOSP}", (*) => EditorInsertTag("{HOSPITAL}"), "default").SetBackdrop(THEME["card"])
     CreateOutlineBtn(EditorGui, xRight+258, yTags, 72, 30, "{SPEC}", (*) => EditorInsertTag("{SPECIALTY}"), "default").SetBackdrop(THEME["card"])
 
     yCmds := yTags + 36
-    CreateFieldLabel(EditorGui, xRight+18, yCmds+9, 100, "КОМАНДЫ")
+    CreateFieldLabel(EditorGui, xRight+18, yCmds+9, 100, "Команды")
     CreateOutlineBtn(EditorGui, xRight+118, yCmds, 48, 30, "/я", (*) => EditorInsertTag("/я "), "default").SetBackdrop(THEME["card"])
     CreateOutlineBtn(EditorGui, xRight+172, yCmds, 48, 30, "/фд", (*) => EditorInsertTag("/фд "), "default").SetBackdrop(THEME["card"])
     CreateOutlineBtn(EditorGui, xRight+226, yCmds, 48, 30, "/де", (*) => EditorInsertTag("/де "), "default").SetBackdrop(THEME["card"])
@@ -166,7 +166,7 @@ OpenBindEditor(slotNum) {
 
     yEdit := yCmds + 54
     hEdit := 52     ; однострочное поле строки бинда (остальное место — предпросмотру)
-    CreateFieldLabel(EditorGui, xRight+18, yEdit-16, 200, "ТЕКСТ СТРОКИ")
+    CreateFieldLabel(EditorGui, xRight+18, yEdit-16, 200, "Текст строки")
     editField := CreateInput(EditorGui, xRight+18, yEdit, rightW-36, hEdit, "vCurrentLineText Disabled", "", 10, THEME["card"])
     EditorEditBox := editField.ctrl
     SetDarkControl(EditorEditBox)
@@ -174,7 +174,7 @@ OpenBindEditor(slotNum) {
 
     ; --- ЗАДЕРЖКА ---
     yDelay := yEdit + hEdit + 12
-    CreateFieldLabel(EditorGui, xRight+18, yDelay+11, 90, "ЗАДЕРЖКА")
+    CreateFieldLabel(EditorGui, xRight+18, yDelay+11, 90, "Задержка")
     delayField := CreateInput(EditorGui, xRight+108, yDelay, 80, 32, "Number Center vCurrentLineDelay Disabled", "", 9, THEME["card"])
     EditorDelayBox := delayField.ctrl
     EditorDelayBox.OnEvent("Change", EditorHandleDelayInput)
@@ -192,7 +192,7 @@ OpenBindEditor(slotNum) {
     preview := EditorGui.AddText("x" (xRight+18) " y" yPreview " w" (rightW-36) " h" hPreview " Background" THEME["bgElevated"], "")
     RoundCorners(preview, rightW-36, hPreview, THEME["radiusSm"])
     SendPanelToBack(preview)
-    CreateFieldLabel(EditorGui, xRight+30, yPreview+10, 220, "ПРЕДПРОСМОТР")
+    CreateFieldLabel(EditorGui, xRight+30, yPreview+10, 220, "Предпросмотр")
     EditorGui.SetFont("s9", THEME["fontFamily"])
     EditorGui.AddText("x" (xRight+30) " y" (yPreview+30) " w" (rightW-60) " h" (hPreview-38) " c" THEME["text"] " BackgroundTrans vEditorPreview", "Выберите строку...")
 
@@ -202,7 +202,7 @@ OpenBindEditor(slotNum) {
     EditorGui.SetFont("s8 norm", THEME["fontFamily"])
     EditorGui.AddText("x22 y" (yFooter+12) " w420 c" THEME["textMuted"] " BackgroundTrans", "Изменения применяются после сохранения")
     CreateOutlineBtn(EditorGui, totalW-400, yFooter, 170, 40, "Отмена", (*) => SafeCloseEditor(), "default").SetBackdrop(THEME["bg"])
-    btnSaveBind := CreateOutlineBtn(EditorGui, totalW-210, yFooter, 190, 40, "СОХРАНИТЬ БИНД", (*) => SaveModernEditor(), "primary")
+    btnSaveBind := CreateOutlineBtn(EditorGui, totalW-210, yFooter, 190, 40, "Сохранить бинд", (*) => SaveModernEditor(), "primary")
     btnSaveBind.SetBackdrop(THEME["bg"])
     btnSaveBind.ctrl.SetFont("s8 bold", THEME["fontFamily"])
 
@@ -565,10 +565,10 @@ SafeCloseEditor() {
         if g_BtnGlobalSave {
             if GlobalUnsavedChanges {
                 UpdateButtonState(g_BtnGlobalSave, true, "primary")
-                g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+                g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
             } else {
                 UpdateButtonState(g_BtnGlobalSave, false)
-                g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ"
+                g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
             }
             try UpdateSaveBar(GlobalUnsavedChanges)
         }

@@ -100,7 +100,7 @@ MarkUnsaved() {
         try {
             ; SAVE становится primary action (cyan)
             UpdateButtonState(g_BtnGlobalSave, true, "primary")
-            g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
         }
     }
     ; Нижний status bar: ● UNSAVED CHANGES

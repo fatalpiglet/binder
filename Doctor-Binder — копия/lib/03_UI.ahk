@@ -23,6 +23,7 @@ class StyledBtn {
         ; --- премиальный рендер ---
         this.align := "center"      ; center | left
         this.glyph := ""            ; правый монохромный глиф (→ ↻ ↑ ↓ ?)
+        this.leftGlyph := ""        ; левая иконка пункта навигации
         this.backdrop := ""         ; цвет поверхности ПОД кнопкой (чистые углы)
         this.glow := ""             ; мягкое свечение (только primary/active)
 
@@ -54,10 +55,16 @@ class StyledBtn {
         try RoundCorners(this.ctrl, this.w, this.h, this.radius + 2)
     }
 
-    ; Левое выравнивание + правый глиф — для action-панелей (Quick Actions).
+    ; Левое выравнивание + правый глиф — для action-панелей (быстрые действия).
     SetLayout(align := "center", glyph := "") {
         this.align := align
         this.glyph := glyph
+        this.Refresh()
+    }
+
+    ; Левая монохромная иконка (пункты бокового меню).
+    SetIcon(glyph) {
+        this.leftGlyph := glyph
         this.Refresh()
     }
 
@@ -193,6 +200,7 @@ class NavigationTab extends StyledBtn {
         this.isNav := true
         this.radius := THEME["radiusSm"] + 2
         this.backdrop := THEME["surface"]
+        this.align := "left"        ; пункт бокового меню, а не кнопка-таблетка
         RoundCorners(this.ctrl, this.w, this.h, this.radius + 2)
         this.SetActive(active)
     }
@@ -208,7 +216,7 @@ class NavigationTab extends StyledBtn {
                 glow: THEME["accent"]
             }
             this.glow := THEME["accent"]
-            this.ctrl.SetFont("s9 bold", THEME["fontFamily"])
+            this.ctrl.SetFont("s10 bold", THEME["fontFamily"])
         } else {
             ; Неактивная: приглушённый текст, без рамки и без свечения.
             this.colors := {
@@ -217,7 +225,7 @@ class NavigationTab extends StyledBtn {
                 glow: ""
             }
             this.glow := ""
-            this.ctrl.SetFont("s9 norm", THEME["fontFamily"])
+            this.ctrl.SetFont("s10 norm", THEME["fontFamily"])
         }
         this.isHovered := false
         this.ApplyVisual(this.colors.bg, this.colors.text)
@@ -292,8 +300,26 @@ DrawStyledButton(wParam, lParam, msg, hwnd) {
 
     alignLeft := btn.HasOwnProp("align") && btn.align = "left"
     glyph := btn.HasOwnProp("glyph") ? btn.glyph : ""
+    leftGlyph := btn.HasOwnProp("leftGlyph") ? btn.leftGlyph : ""
     padL := alignLeft ? 16 : 8
+    if leftGlyph != ""
+        padL += 26
     padR := (glyph != "") ? 34 : 8
+
+    ; Левая иконка — отдельным символьным шрифтом, чтобы кириллица в подписи
+    ; рисовалась основным UI-шрифтом, а глиф гарантированно был из Segoe UI Symbol.
+    if leftGlyph != "" {
+        iconColor := btn.isClickable ? btn.currentText : BlendHex(btn.currentBg, btn.currentText, 0.6)
+        DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(iconColor))
+        symFont := GetSymbolFont(14)
+        prevF := symFont ? DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", symFont, "Ptr") : 0
+        iRect := Buffer(16)
+        NumPut("Int", left + 16, iRect, 0), NumPut("Int", top, iRect, 4)
+        NumPut("Int", left + 40, iRect, 8), NumPut("Int", bottom, iRect, 12)
+        DllCall("user32\DrawText", "Ptr", hdc, "Str", leftGlyph, "Int", -1, "Ptr", iRect, "UInt", 0x25)
+        if prevF
+            DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", prevF)
+    }
 
     DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(btn.currentText))
     rect := Buffer(16)
@@ -306,16 +332,32 @@ DrawStyledButton(wParam, lParam, msg, hwnd) {
     if glyph != "" {
         glyphColor := (btn.isHovered && btn.isClickable) ? btn.currentText : BlendHex(btn.currentBg, btn.currentText, 0.55)
         DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(glyphColor))
+        symFont := GetSymbolFont(13)
+        prevF := symFont ? DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", symFont, "Ptr") : 0
         gRect := Buffer(16)
         NumPut("Int", left + 8, gRect, 0), NumPut("Int", top, gRect, 4)
         NumPut("Int", right - 16, gRect, 8), NumPut("Int", bottom, gRect, 12)
         ; DT_RIGHT | DT_VCENTER | DT_SINGLELINE
         DllCall("user32\DrawText", "Ptr", hdc, "Str", glyph, "Int", -1, "Ptr", gRect, "UInt", 0x26)
+        if prevF
+            DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", prevF)
     }
 
     if oldFont
         DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", oldFont)
     return true
+}
+
+; Кэш символьного шрифта для глифов кнопок (иконки и стрелки).
+GetSymbolFont(size := 14) {
+    static cache := Map()
+    if cache.Has(size)
+        return cache[size]
+    hFont := DllCall("gdi32\CreateFont", "Int", -size, "Int", 0, "Int", 0, "Int", 0, "Int", 400
+        , "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 1, "UInt", 0, "UInt", 0, "UInt", 4, "UInt", 0
+        , "Str", "Segoe UI Symbol", "Ptr")
+    cache[size] := hFont
+    return hFont
 }
 
 ; Контурное кольцо свечения (без заливки — брошен NULL_BRUSH до вызова).
@@ -553,35 +595,78 @@ CreateFieldLabel(parent, x, y, w, text, color := "") {
     return lbl
 }
 
-; Спокойная карточка: тонкая рамка + тёмная поверхность + умеренный радиус.
+; Спокойная карточка: очень тонкая рамка + тёмная поверхность + мягкая
+; «глубина» (светлая линия по верхней кромке). Рамка не должна быть главным
+; элементом — иерархию задают уровни поверхностей и типографика.
 ; Возвращает {frame, surface} — обе панели уходят под содержимое.
-CreateCard(parent, x, y, w, h, radius := 0) {
+CreateCard(parent, x, y, w, h, radius := 0, surfaceColor := "") {
     global THEME
     if !radius
         radius := THEME["radiusLg"]
-    frame := parent.AddText("x" x " y" y " w" w " h" h " Background" THEME["border"], "")
+    if surfaceColor = ""
+        surfaceColor := THEME["card"]
+
+    frame := parent.AddText("x" x " y" y " w" w " h" h " Background" THEME["cardBorder"], "")
     RoundCorners(frame, w, h, radius)
-    surface := parent.AddText("x" (x + 1) " y" (y + 1) " w" (w - 2) " h" (h - 2) " Background" THEME["card"], "")
+    surface := parent.AddText("x" (x + 1) " y" (y + 1) " w" (w - 2) " h" (h - 2) " Background" surfaceColor, "")
     RoundCorners(surface, w - 2, h - 2, radius)
-    ; Порядок важен: сначала вниз уходит поверхность, затем рамка — так рамка
-    ; оказывается самой нижней, а поверхность лежит ровно поверх неё.
+    ; Едва заметный блик по верхней кромке — объём без теней и градиентов.
+    top := parent.AddText("x" (x + radius) " y" (y + 1) " w" (w - radius * 2) " h1 Background"
+        BlendHex(surfaceColor, "ffffff", 0.05), "")
+    ; Порядок важен: последним вниз уходит самый нижний слой.
+    SendPanelToBack(top)
     SendPanelToBack(surface)
     SendPanelToBack(frame)
     return {frame: frame, surface: surface}
 }
 
-; Заголовок карточки + системный номер справа (01 / 02 / 03) + разделитель.
-CreateCardHeader(parent, x, y, w, title, index := "", pad := 0) {
+; Очень мягкое свечение вокруг карточки (активное состояние).
+; Кольца всегда существуют, но в покое окрашены в цвет подложки.
+class CardGlow {
+    __New(parent, x, y, w, h, color, backdrop := "", radius := 0) {
+        global THEME
+        if !radius
+            radius := THEME["radiusLg"]
+        this.backdrop := backdrop = "" ? THEME["bg"] : backdrop
+        this.rings := []
+        this.active := false
+        ; Внутреннее кольцо создаём первым: после SendPanelToBack оно окажется
+        ; выше внешнего, и оба — под карточкой.
+        for spec in [[2, 0.20], [5, 0.09]] {
+            pad := spec[1], k := spec[2]
+            ring := parent.AddText("x" (x - pad) " y" (y - pad) " w" (w + pad * 2) " h" (h + pad * 2)
+                " Background" this.backdrop, "")
+            RoundCorners(ring, w + pad * 2, h + pad * 2, radius + pad)
+            SendPanelToBack(ring)
+            this.rings.Push({ctrl: ring, on: BlendHex(this.backdrop, color, k)})
+        }
+    }
+
+    Set(state) {
+        if this.active = state
+            return
+        this.active := state
+        for r in this.rings {
+            try {
+                r.ctrl.Opt("Background" (state ? r.on : this.backdrop))
+                r.ctrl.Redraw()
+            }
+        }
+    }
+}
+
+; Заголовок карточки. Без разделительной линии: иерархию держат размер,
+; вес и отступы. Справа — необязательная приглушённая подпись.
+CreateCardHeader(parent, x, y, w, title, note := "", pad := 0) {
     global THEME
     if !pad
         pad := THEME["cardPad"]
-    t := parent.AddText("x" (x + pad) " y" (y + 16) " w" (w - pad * 2 - 34) " h18 BackgroundTrans c" THEME["text"], title)
+    t := parent.AddText("x" (x + pad) " y" (y + 16) " w" (w - pad * 2 - 110) " h20 BackgroundTrans c" THEME["text"], title)
     t.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
-    if index != "" {
-        n := parent.AddText("x" (x + w - pad - 34) " y" (y + 17) " w34 h16 Right BackgroundTrans c" THEME["textMuted"], index)
+    if note != "" {
+        n := parent.AddText("x" (x + w - pad - 110) " y" (y + 19) " w110 h16 Right BackgroundTrans c" THEME["textMuted"], note)
         n.SetFont("s" THEME["fontMeta"] " norm", THEME["fontFamily"])
     }
-    parent.AddText("x" (x + pad) " y" (y + 44) " w" (w - pad * 2) " h1 Background" THEME["border"], "")
     return t
 }
 
