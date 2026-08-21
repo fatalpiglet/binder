@@ -804,7 +804,7 @@ class DarkSelect {
         this.parent := parent
         this.items := items
         this.onChange := onChange
-        this.enabled := true
+        this.isEnabled := true
         this.visible := true
         this.w := w, this.h := h
         if (selectedIndex < 1 || selectedIndex > items.Length)
@@ -839,8 +839,10 @@ class DarkSelect {
         get => this.isEnabled
         set {
             this.isEnabled := value ? true : false
-            this.btn.isClickable := this.isEnabled
-            this.ApplyIdle()
+            if this.HasOwnProp("btn") && IsObject(this.btn) {
+                this.btn.isClickable := this.isEnabled
+                this.ApplyIdle()
+            }
         }
     }
 
