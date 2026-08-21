@@ -325,7 +325,7 @@ ClearAllBindsAction(*) {
     ; Помечаем, что есть изменения
     MarkUnsaved()
     
-    ShowNotify("🗑️ Все бинды удалены!", "success")
+    ShowNotify("Все бинды удалены!", "success")
 }
 
 
@@ -408,7 +408,7 @@ SafeRunSlot(num) {
         || (GetKeyState("LWin", "P") && !ignoreWin)
         || (GetKeyState("RWin", "P") && !ignoreWin)
     {
-        ShowNotify("🚫 Зажат лишний модификатор, активация отменена", "warning")
+        ShowNotify("Зажат лишний модификатор, активация отменена", "warning")
         return
     }
     
@@ -514,7 +514,7 @@ SafeToggleOverlay() {  ; ✅ Без параметра
         || (GetKeyState("LWin", "P") && !ignoreWin)
         || (GetKeyState("RWin", "P") && !ignoreWin)
     {
-        ShowNotify("🚫 Лишний модификатор при ToggleOverlay", "warning")
+        ShowNotify("Лишний модификатор при ToggleOverlay", "warning")
         return
     }
     
@@ -539,7 +539,7 @@ SafeToggleMiniOverlay() {  ; ✅ Без параметра
         || (GetKeyState("LWin", "P") && !ignoreWin)
         || (GetKeyState("RWin", "P") && !ignoreWin)
     {
-        ShowNotify("🚫 Лишний модификатор при ToggleMiniOverlay", "warning")
+        ShowNotify("Лишний модификатор при ToggleMiniOverlay", "warning")
         return
     }
 
@@ -564,7 +564,7 @@ StopSending() { ; <--- Больше не принимает параметр tri
     ;     || (GetKeyState("LWin", "P") && !ignoreWin)
     ;     || (GetKeyState("RWin", "P") && !ignoreWin)
     ; {
-    ;     ShowNotify("🚫 Лишний модификатор при StopSending", "warning")
+    ;     ShowNotify("Лишний модификатор при StopSending", "warning")
     ;     return
     ; }
 
@@ -611,7 +611,7 @@ ReplyToLastSms() { ; <--- Больше не принимает параметр 
     ;     || (GetKeyState("LWin", "P") && !ignoreWin)
     ;     || (GetKeyState("RWin", "P") && !ignoreWin)
     ; {
-    ;     ShowNotify("🚫 Лишний модификатор при ReplyToLastSms", "warning")
+    ;     ShowNotify("Лишний модификатор при ReplyToLastSms", "warning")
     ;     return
     ; }
 

@@ -20,6 +20,11 @@ class StyledBtn {
         this.isHovered := false
         this.isClickable := true
         this.lastState := true
+        ; --- премиальный рендер ---
+        this.align := "center"      ; center | left
+        this.glyph := ""            ; правый монохромный глиф (→ ↻ ↑ ↓ ?)
+        this.backdrop := ""         ; цвет поверхности ПОД кнопкой (чистые углы)
+        this.glow := ""             ; мягкое свечение (только primary/active)
 
         ; Один Static HWND: никаких frame/ctrl-слоёв. Region применяется к тому
         ; же контролу, который рисует фон и текст.
@@ -41,17 +46,42 @@ class StyledBtn {
     }
 
     ApplyShape() {
-        this.radius := Max(10, Min(12, this.h // 2))
+        global THEME
+        ; Умеренный радиус (6–12px) вместо «таблеток»: профессионально, не mobile SaaS.
+        this.radius := Max(6, Min(THEME["radiusLg"], this.h // 3))
         ; Region отвечает только за прозрачные углы. Видимый контур рисуется
         ; внутри него с отступом, поэтому ступенчатый край маски не подсвечен.
         try RoundCorners(this.ctrl, this.w, this.h, this.radius + 2)
+    }
+
+    ; Левое выравнивание + правый глиф — для action-панелей (Quick Actions).
+    SetLayout(align := "center", glyph := "") {
+        this.align := align
+        this.glyph := glyph
+        this.Refresh()
+    }
+
+    ; Цвет поверхности под кнопкой: убирает мусор в скруглённых углах.
+    SetBackdrop(color) {
+        this.backdrop := color
+        this.Refresh()
+    }
+
+    ; Мягкое свечение (enhancement, не основа дизайна).
+    SetGlow(color) {
+        this.glow := color
+        this.Refresh()
+    }
+
+    Refresh() {
+        try DllCall("user32\InvalidateRect", "Ptr", this.ctrl.Hwnd, "Ptr", 0, "Int", true)
     }
 
     OnClick() {
         if !this.isClickable
             return
         this.SetPressed(true)
-        SetTimer(() => this.SetPressed(false), -80)
+        SetTimer(() => this.SetPressed(false), -110)
         try this.callback.Call()
     }
 
@@ -62,15 +92,29 @@ class StyledBtn {
         this.ApplyVisual(bg, this.colors.text)
     }
 
+    ; ── Палитра кнопок ────────────────────────────────────────────────────────
+    ; Базовый вид = тёмная поверхность + тонкая рамка + светлый текст.
+    ; Cyan появляется только у primary и у активных состояний.
     GetColors(style) {
         style := StrLower(style)
         switch style {
-            case "icon", "close": return {bg: "121a26", hover: "26303d", pressed: "0f1823", border: "121a26", borderHover: "df788b", text: "9aabc0"}
-            case "success", "green", "ok", "save": return {bg: "18382f", hover: "205043", pressed: "142f28", border: "28664f", borderHover: "4ab187", text: "baf3da"}
-            case "danger", "red", "delete", "error": return {bg: "39222c", hover: "512d3a", pressed: "301c25", border: "703747", borderHover: "bd6079", text: "ffc3cf"}
-            case "info", "blue", "primary": return {bg: "173247", hover: "1c4865", pressed: "122a3c", border: "286381", borderHover: "52b7e9", text: "bde8ff"}
-            case "warning", "yellow": return {bg: "3a3020", hover: "514326", pressed: "30281a", border: "73592e", borderHover: "c89a4a", text: "f8d99b"}
-            default: return {bg: "1b2737", hover: "26384f", pressed: "152131", border: "354a62", borderHover: "54708f", text: "e7eef7"}
+            case "icon", "close":
+                return {bg: "0d1016", hover: "1c1419", pressed: "141018", border: "1a212c", borderHover: "5c2f3c", text: "8d97a5", glow: ""}
+            case "ghost", "flat":
+                return {bg: "0d1016", hover: "151d28", pressed: "0d1016", border: "0d1016", borderHover: "202833", text: "9aa4b2", glow: ""}
+            case "primary", "cyan", "accent":
+                return {bg: "0e2a37", hover: "123646", pressed: "0c2431", border: "1e5f7d", borderHover: "38bdf8", text: "cfeeff", glow: "38bdf8"}
+            case "success", "green", "ok", "save":
+                return {bg: "0f2a20", hover: "143528", pressed: "0d2119", border: "1f5c44", borderHover: "35c98a", text: "9fe6c4", glow: ""}
+            case "danger", "red", "delete", "error":
+                return {bg: "24141a", hover: "301a22", pressed: "1e1116", border: "5a2a37", borderHover: "e66b83", text: "efb0bc", glow: ""}
+            case "info", "blue":
+                ; Нейтральная «прохладная» кнопка: без заливки cyan.
+                return {bg: "111722", hover: "16202c", pressed: "0e141d", border: "22303f", borderHover: "3c5670", text: "dde3ea", glow: ""}
+            case "warning", "yellow":
+                return {bg: "241d12", hover: "2e2517", pressed: "1d170e", border: "50401f", borderHover: "d9a75c", text: "e6c78e", glow: ""}
+            default:
+                return {bg: "111722", hover: "151d28", pressed: "0e141d", border: "202833", borderHover: "344252", text: "e6eaf0", glow: ""}
         }
     }
 
@@ -80,30 +124,38 @@ class StyledBtn {
         try DllCall("user32\InvalidateRect", "Ptr", this.ctrl.Hwnd, "Ptr", 0, "Int", true)
     }
 
-    SetVisual(bg, textColor := "ffffff", hoverBg := "") {
+    SetVisual(bg, textColor := "ffffff", hoverBg := "", border := "", glow := "") {
         global THEME
         if hoverBg = ""
             hoverBg := bg
+        if border = ""
+            border := THEME["border"]
         this.colors := {
             bg: bg,
             hover: hoverBg,
             pressed: bg,
-            border: THEME["borderLight"],
-            borderHover: hoverBg,
-            text: textColor
+            border: border,
+            borderHover: THEME["borderLight"],
+            text: textColor,
+            glow: glow
         }
+        this.glow := glow
         this.ApplyVisual(bg, textColor)
     }
 
-    SetEnabledStyle(isActive, style := "success") {
+    SetEnabledStyle(isActive, style := "primary") {
         global THEME
         this.isClickable := isActive
         this.isHovered := false
         if isActive {
             this.colors := this.GetColors(style)
+            this.glow := this.colors.HasOwnProp("glow") ? this.colors.glow : ""
             this.ApplyVisual(this.colors.bg, this.colors.text)
         } else {
-            this.colors := {bg: THEME["bgLight"], hover: THEME["bgLight"], pressed: THEME["bgLight"], border: THEME["border"], borderHover: THEME["border"], text: THEME["textMuted"]}
+            ; Приглушённое (disabled) состояние: та же геометрия, меньше контраста.
+            this.glow := ""
+            this.colors := {bg: THEME["surface"], hover: THEME["surface"], pressed: THEME["surface"]
+                , border: THEME["border"], borderHover: THEME["border"], text: THEME["textMuted"], glow: ""}
             this.ApplyVisual(this.colors.bg, this.colors.text)
         }
     }
@@ -134,11 +186,13 @@ class StyledBtn {
 ; семантику состояний и не выглядит как action-кнопка.
 class NavigationTab extends StyledBtn {
     __New(parent, x, y, w, h, text, id, callback, active := false) {
+        global THEME
         this.id := id
         this.active := active
         super.__New(parent, x, y, w, h, text, callback, "default")
         this.isNav := true
-        this.radius := 10
+        this.radius := THEME["radiusSm"] + 2
+        this.backdrop := THEME["surface"]
         RoundCorners(this.ctrl, this.w, this.h, this.radius + 2)
         this.SetActive(active)
     }
@@ -147,16 +201,22 @@ class NavigationTab extends StyledBtn {
         global THEME
         this.active := active
         if active {
+            ; Активная вкладка: чуть светлее поверхность, cyan-рамка, мягкое свечение.
             this.colors := {
                 bg: THEME["bgSelected"], hover: THEME["bgSelected"], pressed: THEME["bgSelected"],
-                border: THEME["borderLight"], borderHover: THEME["accent"], text: THEME["accent"]
+                border: THEME["accentDark"], borderHover: THEME["accent"], text: THEME["accent"],
+                glow: THEME["accent"]
             }
+            this.glow := THEME["accent"]
             this.ctrl.SetFont("s9 bold", THEME["fontFamily"])
         } else {
+            ; Неактивная: приглушённый текст, без рамки и без свечения.
             this.colors := {
-                bg: THEME["bgLight"], hover: THEME["bgHover"], pressed: THEME["bgHighlight"],
-                border: THEME["bgLight"], borderHover: THEME["borderLight"], text: THEME["textDim"]
+                bg: THEME["surface"], hover: THEME["bgElevated"], pressed: THEME["surface"],
+                border: THEME["surface"], borderHover: THEME["border"], text: THEME["textDim"],
+                glow: ""
             }
+            this.glow := ""
             this.ctrl.SetFont("s9 norm", THEME["fontFamily"])
         }
         this.isHovered := false
@@ -170,7 +230,7 @@ global ButtonByHwnd := Map()
 OnMessage(0x002B, DrawStyledButton) ; WM_DRAWITEM
 
 DrawStyledButton(wParam, lParam, msg, hwnd) {
-    global ButtonByHwnd
+    global ButtonByHwnd, THEME
     hwndOffset := 20 + (A_PtrSize - 4)
     hdcOffset := hwndOffset + A_PtrSize
     rectOffset := hdcOffset + A_PtrSize
@@ -186,13 +246,38 @@ DrawStyledButton(wParam, lParam, msg, hwnd) {
     top := NumGet(lParam, rectOffset + 4, "Int")
     right := NumGet(lParam, rectOffset + 8, "Int")
     bottom := NumGet(lParam, rectOffset + 12, "Int")
-    border := btn.isHovered && btn.isClickable ? btn.colors.borderHover : btn.colors.border
 
+    backdrop := (btn.HasOwnProp("backdrop") && btn.backdrop != "") ? btn.backdrop : THEME["card"]
+    border := btn.isHovered && btn.isClickable ? btn.colors.borderHover : btn.colors.border
+    diameter := btn.radius * 2
+
+    ; 1. Подложка: гарантирует чистые скруглённые углы без «мусора» от region.
+    full := Buffer(16)
+    NumPut("Int", left, full, 0), NumPut("Int", top, full, 4)
+    NumPut("Int", right, full, 8), NumPut("Int", bottom, full, 12)
+    backBrush := DllCall("gdi32\CreateSolidBrush", "UInt", HexToColorRef(backdrop), "Ptr")
+    DllCall("user32\FillRect", "Ptr", hdc, "Ptr", full, "Ptr", backBrush)
+    DllCall("gdi32\DeleteObject", "Ptr", backBrush)
+
+    ; 2. Очень мягкое свечение — два кольца, только у primary/active элементов.
+    glowColor := ""
+    if btn.HasOwnProp("glow") && btn.glow != ""
+        glowColor := btn.glow
+    else if IsObject(btn.colors) && btn.colors.HasOwnProp("glow")
+        glowColor := btn.colors.glow
+    if (glowColor != "" && btn.isClickable) {
+        hollow := DllCall("gdi32\GetStockObject", "Int", 5, "Ptr") ; NULL_BRUSH
+        prevBrush := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", hollow, "Ptr")
+        DrawGlowRing(hdc, left, top, right, bottom, diameter + 4, BlendHex(backdrop, glowColor, 0.12))
+        DrawGlowRing(hdc, left + 1, top + 1, right - 1, bottom - 1, diameter + 2, BlendHex(backdrop, glowColor, 0.26))
+        DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", prevBrush)
+    }
+
+    ; 3. Тело кнопки.
     brush := DllCall("gdi32\CreateSolidBrush", "UInt", HexToColorRef(btn.currentBg), "Ptr")
     pen := DllCall("gdi32\CreatePen", "Int", 0, "Int", 1, "UInt", HexToColorRef(border), "Ptr")
     oldBrush := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", brush, "Ptr")
     oldPen := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", pen, "Ptr")
-    diameter := btn.radius * 2
     DllCall("gdi32\RoundRect", "Ptr", hdc, "Int", left + 2, "Int", top + 2, "Int", right - 2, "Int", bottom - 2
         , "Int", diameter, "Int", diameter)
     DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", oldBrush)
@@ -200,18 +285,59 @@ DrawStyledButton(wParam, lParam, msg, hwnd) {
     DllCall("gdi32\DeleteObject", "Ptr", brush)
     DllCall("gdi32\DeleteObject", "Ptr", pen)
 
+    ; 4. Текст (+ опциональный правый глиф).
     DllCall("gdi32\SetBkMode", "Ptr", hdc, "Int", 1)
-    DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(btn.currentText))
     font := SendMessage(0x31, 0, 0, ctrlHwnd)
     oldFont := font ? DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", font, "Ptr") : 0
+
+    alignLeft := btn.HasOwnProp("align") && btn.align = "left"
+    glyph := btn.HasOwnProp("glyph") ? btn.glyph : ""
+    padL := alignLeft ? 16 : 8
+    padR := (glyph != "") ? 34 : 8
+
+    DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(btn.currentText))
     rect := Buffer(16)
-    NumPut("Int", left + 6, rect, 0), NumPut("Int", top, rect, 4)
-    NumPut("Int", right - 6, rect, 8), NumPut("Int", bottom, rect, 12)
-    DllCall("user32\DrawText", "Ptr", hdc, "Str", btn.ctrl.Text, "Int", -1, "Ptr", rect
-        , "UInt", 0x25) ; DT_CENTER | DT_VCENTER | DT_SINGLELINE
+    NumPut("Int", left + padL, rect, 0), NumPut("Int", top, rect, 4)
+    NumPut("Int", right - padR, rect, 8), NumPut("Int", bottom, rect, 12)
+    ; DT_VCENTER | DT_SINGLELINE (+ DT_CENTER для центрированных кнопок)
+    flags := alignLeft ? 0x24 : 0x25
+    DllCall("user32\DrawText", "Ptr", hdc, "Str", btn.ctrl.Text, "Int", -1, "Ptr", rect, "UInt", flags)
+
+    if glyph != "" {
+        glyphColor := (btn.isHovered && btn.isClickable) ? btn.currentText : BlendHex(btn.currentBg, btn.currentText, 0.55)
+        DllCall("gdi32\SetTextColor", "Ptr", hdc, "UInt", HexToColorRef(glyphColor))
+        gRect := Buffer(16)
+        NumPut("Int", left + 8, gRect, 0), NumPut("Int", top, gRect, 4)
+        NumPut("Int", right - 16, gRect, 8), NumPut("Int", bottom, gRect, 12)
+        ; DT_RIGHT | DT_VCENTER | DT_SINGLELINE
+        DllCall("user32\DrawText", "Ptr", hdc, "Str", glyph, "Int", -1, "Ptr", gRect, "UInt", 0x26)
+    }
+
     if oldFont
         DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", oldFont)
     return true
+}
+
+; Контурное кольцо свечения (без заливки — брошен NULL_BRUSH до вызова).
+DrawGlowRing(hdc, left, top, right, bottom, diameter, color) {
+    pen := DllCall("gdi32\CreatePen", "Int", 0, "Int", 1, "UInt", HexToColorRef(color), "Ptr")
+    oldPen := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", pen, "Ptr")
+    DllCall("gdi32\RoundRect", "Ptr", hdc, "Int", left, "Int", top, "Int", right, "Int", bottom
+        , "Int", diameter, "Int", diameter)
+    DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", oldPen)
+    DllCall("gdi32\DeleteObject", "Ptr", pen)
+}
+
+; Смешивание двух HEX-цветов (t = 0..1). Используется для мягких свечений,
+; halo у статус-точек и приглушённых глифов.
+BlendHex(colorA, colorB, t) {
+    a := Integer("0x" StrReplace(String(colorA), "#"))
+    b := Integer("0x" StrReplace(String(colorB), "#"))
+    t := Max(0, Min(1, t))
+    r := Round(((a >> 16) & 0xFF) * (1 - t) + ((b >> 16) & 0xFF) * t)
+    g := Round(((a >> 8) & 0xFF) * (1 - t) + ((b >> 8) & 0xFF) * t)
+    bl := Round((a & 0xFF) * (1 - t) + (b & 0xFF) * t)
+    return Format("{:06x}", (r << 16) | (g << 8) | bl)
 }
 
 HexToColorRef(hex) {
@@ -302,6 +428,246 @@ RoundCorners(ctrl, w, h, radius := 8) {
     return false
 }
 
+; ═══════════════════════════════════════════════════════════════════════════════
+;  ПРЕМИАЛЬНЫЕ БАЗОВЫЕ КОНТРОЛЫ
+;  Стандартные Windows Edit/Static заменяются составными компонентами:
+;  подложка свечения → рамка → поверхность поля → сам Edit без клиентского
+;  «белого» края (WS_EX_CLIENTEDGE снят). Логика контролов не меняется:
+;  наружу отдаётся тот же Gui.Edit с тем же v-именем и событиями.
+; ═══════════════════════════════════════════════════════════════════════════════
+class InputField {
+    static Registry := []
+
+    __New(parent, x, y, w, h, options := "", value := "", fontSize := 10, backdrop := "", accentText := "") {
+        global THEME
+        this.parent := parent
+        this.x := x, this.y := y, this.w := w, this.h := h
+        this.focused := false
+        this.hovered := false
+        this.visible := true
+        this.backdrop := backdrop = "" ? THEME["card"] : backdrop
+
+        r := THEME["radiusSm"]
+
+        ; Кольцо мягкого cyan-свечения (видно только в фокусе).
+        this.glowRing := parent.AddText("x" (x - 2) " y" (y - 2) " w" (w + 4) " h" (h + 4)
+            " Background" BlendHex(this.backdrop, THEME["accent"], 0.16), "")
+        RoundCorners(this.glowRing, w + 4, h + 4, r + 2)
+        try this.glowRing.Visible := false
+
+        ; Рамка (1px) — цвет меняется на hover/focus.
+        this.frame := parent.AddText("x" x " y" y " w" w " h" h " Background" THEME["fieldBorder"], "")
+        RoundCorners(this.frame, w, h, r)
+
+        ; Поверхность поля.
+        this.inner := parent.AddText("x" (x + 1) " y" (y + 1) " w" (w - 2) " h" (h - 2) " Background" THEME["fieldBg"], "")
+        RoundCorners(this.inner, w - 2, h - 2, r)
+
+        isMulti := InStr(options, "Multi") ? true : false
+        if isMulti {
+            edH := h - 12
+            edY := y + 6
+        } else {
+            edH := Max(18, Min(h - 8, Round(fontSize * 2.0)))
+            ; Обычное поле — текст по центру; высокое однострочное поле
+            ; (например, строка бинда в редакторе) — текст сверху.
+            edY := (h > 56) ? (y + 10) : (y + (h - edH) // 2)
+        }
+        textColor := accentText = "" ? THEME["text"] : accentText
+
+        parent.SetFont("s" fontSize " norm", THEME["fontFamily"])
+        this.ctrl := parent.AddEdit("x" (x + 11) " y" edY " w" (w - 22) " h" edH
+            " -E0x200 -Border Background" THEME["fieldBg"] " c" textColor " " options, value)
+        this.ctrl.SetFont("s" fontSize " norm", THEME["fontFamily"])
+
+        try this.ctrl.OnEvent("Focus", (*) => this.SetFocused(true))
+        try this.ctrl.OnEvent("LoseFocus", (*) => this.SetFocused(false))
+
+        InputField.Registry.Push(this)
+    }
+
+    ; Собственный шрифт поля (моно/крупный ID пациента и т.п.)
+    SetFont(opts, family := "") {
+        global THEME
+        try this.ctrl.SetFont(opts, family = "" ? THEME["fontFamily"] : family)
+    }
+
+    SetFocused(state) {
+        if this.focused = state
+            return
+        this.focused := state
+        this.Apply()
+    }
+
+    SetHover(state) {
+        if this.hovered = state
+            return
+        this.hovered := state
+        this.Apply()
+    }
+
+    Apply() {
+        global THEME
+        color := this.focused ? THEME["accent"] : (this.hovered ? THEME["borderLight"] : THEME["fieldBorder"])
+        try {
+            this.frame.Opt("Background" color)
+            this.frame.Redraw()
+        }
+        try this.glowRing.Visible := (this.visible && this.focused)
+    }
+
+    SetVisible(state) {
+        this.visible := state
+        try this.frame.Visible := state
+        try this.inner.Visible := state
+        try this.ctrl.Visible := state
+        try this.glowRing.Visible := (state && this.focused)
+    }
+
+    SetEnabled(state) {
+        try this.ctrl.Enabled := state
+    }
+
+    Value {
+        get => this.ctrl.Value
+        set => this.ctrl.Value := value
+    }
+}
+
+; Удобный фасад: возвращает объект InputField (ctrl — сам Edit).
+CreateInput(parent, x, y, w, h, options := "", value := "", fontSize := 10, backdrop := "", accentText := "") {
+    return InputField(parent, x, y, w, h, options, value, fontSize, backdrop, accentText)
+}
+
+; Маленький muted-label над полем (LABEL в верхнем регистре).
+CreateFieldLabel(parent, x, y, w, text, color := "") {
+    global THEME
+    lbl := parent.AddText("x" x " y" y " w" w " h14 BackgroundTrans c" (color = "" ? THEME["textMuted"] : color), text)
+    lbl.SetFont("s" THEME["fontMeta"] " bold", THEME["fontFamily"])
+    return lbl
+}
+
+; Спокойная карточка: тонкая рамка + тёмная поверхность + умеренный радиус.
+; Возвращает {frame, surface} — обе панели уходят под содержимое.
+CreateCard(parent, x, y, w, h, radius := 0) {
+    global THEME
+    if !radius
+        radius := THEME["radiusLg"]
+    frame := parent.AddText("x" x " y" y " w" w " h" h " Background" THEME["border"], "")
+    RoundCorners(frame, w, h, radius)
+    surface := parent.AddText("x" (x + 1) " y" (y + 1) " w" (w - 2) " h" (h - 2) " Background" THEME["card"], "")
+    RoundCorners(surface, w - 2, h - 2, radius)
+    ; Порядок важен: сначала вниз уходит поверхность, затем рамка — так рамка
+    ; оказывается самой нижней, а поверхность лежит ровно поверх неё.
+    SendPanelToBack(surface)
+    SendPanelToBack(frame)
+    return {frame: frame, surface: surface}
+}
+
+; Заголовок карточки + системный номер справа (01 / 02 / 03) + разделитель.
+CreateCardHeader(parent, x, y, w, title, index := "", pad := 0) {
+    global THEME
+    if !pad
+        pad := THEME["cardPad"]
+    t := parent.AddText("x" (x + pad) " y" (y + 16) " w" (w - pad * 2 - 34) " h18 BackgroundTrans c" THEME["text"], title)
+    t.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
+    if index != "" {
+        n := parent.AddText("x" (x + w - pad - 34) " y" (y + 17) " w34 h16 Right BackgroundTrans c" THEME["textMuted"], index)
+        n.SetFont("s" THEME["fontMeta"] " norm", THEME["fontFamily"])
+    }
+    parent.AddText("x" (x + pad) " y" (y + 44) " w" (w - pad * 2) " h1 Background" THEME["border"], "")
+    return t
+}
+
+; ─── Единая система состояний: ● READY / ACTIVE / SAVED / WAITING / ERROR ─────
+class StatusDot {
+    __New(parent, x, y, text := "", color := "", backdrop := "", size := 8, labelW := 220, fontSize := 8) {
+        global THEME
+        this.parent := parent
+        this.size := size
+        this.backdrop := backdrop = "" ? THEME["card"] : backdrop
+        color := color = "" ? THEME["textMuted"] : color
+        this.color := color
+
+        ; Мягкое гало вокруг точки (очень слабое, без ярких плашек).
+        this.halo := parent.AddText("x" (x - 3) " y" (y - 3) " w" (size + 6) " h" (size + 6)
+            " Background" BlendHex(this.backdrop, color, 0.28), "")
+        RoundCorners(this.halo, size + 6, size + 6, (size + 6) // 2)
+
+        this.dot := parent.AddText("x" x " y" y " w" size " h" size " Background" color, "")
+        RoundCorners(this.dot, size, size, size // 2)
+
+        this.label := parent.AddText("x" (x + size + 10) " y" (y - 5) " w" labelW " h" (size + 10)
+            " 0x200 BackgroundTrans c" color, text)
+        this.label.SetFont("s" fontSize " bold", THEME["fontFamily"])
+    }
+
+    Set(text, color := "") {
+        if color = ""
+            color := this.color
+        this.color := color
+        try {
+            this.halo.Opt("Background" BlendHex(this.backdrop, color, 0.28))
+            this.halo.Redraw()
+        }
+        try {
+            this.dot.Opt("Background" color)
+            this.dot.Redraw()
+        }
+        try {
+            this.label.Text := text
+            this.label.Opt("c" color)
+            this.label.Redraw()
+        }
+    }
+
+    SetVisible(state) {
+        try this.halo.Visible := state
+        try this.dot.Visible := state
+        try this.label.Visible := state
+    }
+}
+
+CreateStatusDot(parent, x, y, text := "", color := "", backdrop := "", size := 8, labelW := 220, fontSize := 8) {
+    return StatusDot(parent, x, y, text, color, backdrop, size, labelW, fontSize)
+}
+
+; Проверка наличия шрифта: если Segoe UI Variable недоступен (Windows 10),
+; вся типографика аккуратно откатывается на Segoe UI.
+FontInstalled(name) {
+    hdc := DllCall("user32\GetDC", "Ptr", 0, "Ptr")
+    if !hdc
+        return false
+    hFont := DllCall("gdi32\CreateFont", "Int", 16, "Int", 0, "Int", 0, "Int", 0, "Int", 400
+        , "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 1, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0
+        , "Str", name, "Ptr")
+    result := false
+    if hFont {
+        oldFont := DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", hFont, "Ptr")
+        buf := Buffer(64 * 2, 0)
+        DllCall("gdi32\GetTextFaceW", "Ptr", hdc, "Int", 64, "Ptr", buf)
+        actual := StrGet(buf, "UTF-16")
+        result := (StrLower(actual) = StrLower(name))
+        DllCall("gdi32\SelectObject", "Ptr", hdc, "Ptr", oldFont)
+        DllCall("gdi32\DeleteObject", "Ptr", hFont)
+    }
+    DllCall("user32\ReleaseDC", "Ptr", 0, "Ptr", hdc)
+    return result
+}
+
+ResolveUIFont() {
+    global THEME
+    try {
+        if !FontInstalled(THEME["fontFamily"])
+            THEME["fontFamily"] := THEME["fontFallback"]
+    } catch {
+        THEME["fontFamily"] := THEME["fontFallback"]
+    }
+    return THEME["fontFamily"]
+}
+
+ResolveUIFont()
+
 ; ───────────────────────────────────────────────────────────────────────────────
 ; СОВРЕМЕННЫЕ СКРУГЛЁННЫЕ КНОПКИ (rounded + заливка)
 ; Залитая цветная подложка со скруглёнными углами (RoundCorners) + текст на
@@ -360,6 +726,7 @@ PollButtonHover() {
     global HoverButtons
     static lastWinId := 0
     static lastButton := 0
+    static lastInput := 0
 
     point := Buffer(8, 0)
     if !DllCall("user32\GetCursorPos", "Ptr", point)
@@ -370,6 +737,7 @@ PollButtonHover() {
     winId := hwndAtPoint ? DllCall("user32\GetAncestor", "Ptr", hwndAtPoint, "UInt", 2, "Ptr") : 0
 
     hitButton := 0
+    hitInput := 0
     if winId {
         for btn in HoverButtons {
             if IsButtonUnderMouse(btn, mouseX, mouseY, winId) {
@@ -377,6 +745,23 @@ PollButtonHover() {
                 break
             }
         }
+        if !hitButton {
+            for fld in InputField.Registry {
+                if IsInputUnderMouse(fld, mouseX, mouseY, winId) {
+                    hitInput := fld
+                    break
+                }
+            }
+        }
+    }
+
+    ; hover полей ввода (border: #202D3B → #344252)
+    if hitInput != lastInput {
+        if IsObject(lastInput)
+            try lastInput.SetHover(false)
+        if IsObject(hitInput)
+            try hitInput.SetHover(true)
+        lastInput := hitInput
     }
 
     if hitButton = lastButton && winId = lastWinId
@@ -389,6 +774,30 @@ PollButtonHover() {
 
     lastButton := hitButton
     lastWinId := winId
+}
+
+IsInputUnderMouse(fld, mouseX, mouseY, winId) {
+    if !IsObject(fld)
+        return false
+    try {
+        if fld.parent.Hwnd != winId
+            return false
+        if !fld.visible
+            return false
+        if !DllCall("user32\IsWindowVisible", "Ptr", fld.frame.Hwnd)
+            return false
+        fld.frame.GetPos(&x, &y, &w, &h)
+        point := Buffer(8, 0)
+        NumPut("Int", x, point, 0)
+        NumPut("Int", y, point, 4)
+        DllCall("user32\ClientToScreen", "Ptr", fld.parent.Hwnd, "Ptr", point)
+        screenX := NumGet(point, 0, "Int")
+        screenY := NumGet(point, 4, "Int")
+        return mouseX >= screenX && mouseX < screenX + w
+            && mouseY >= screenY && mouseY < screenY + h
+    } catch {
+        return false
+    }
 }
 
 IsButtonUnderMouse(btn, mouseX, mouseY, winId) {
@@ -416,6 +825,21 @@ IsButtonUnderMouse(btn, mouseX, mouseY, winId) {
 
 CleanupHoverButtons(gui) {
     global HoverButtons, ButtonByHwnd
+    ; Поля ввода уничтоженного окна тоже убираем из реестра hover-опроса.
+    try {
+        aliveInputs := []
+        for fld in InputField.Registry {
+            try {
+                if !IsObject(fld) || !IsObject(fld.parent)
+                    continue
+                if fld.parent = gui
+                    continue
+                if fld.frame.Hwnd && WinExist("ahk_id " fld.frame.Hwnd)
+                    aliveInputs.Push(fld)
+            }
+        }
+        InputField.Registry := aliveInputs
+    }
     if !IsObject(HoverButtons) {
         HoverButtons := []
         return
@@ -478,7 +902,24 @@ SetListViewRowHeight(lv, height := 28) {
 ; ══════════════════════════════════════════════════════════════════════════
 
 CreateClearBtn(parent, x, y, size, callback) {
-    return CreateStyledButton(parent, x, y, size, size, "x", callback, "danger")
+    ; Нейтральная icon-кнопка: красный акцент появляется только на hover.
+    btn := CreateStyledButton(parent, x, y, size, size, "×", callback, "icon", "Очистить")
+    try btn.ctrl.SetFont("s12 norm", "Segoe UI")
+    return btn
+}
+
+; Тёмная тема для стандартных чекбоксов/кнопок Windows: без этого рамка
+; чекбокса рисуется светлой и выбивается из интерфейса.
+StyleCheckbox(ctrl) {
+    global THEME
+    if !IsObject(ctrl)
+        return ctrl
+    try {
+        if VerCompare(A_OSVersion, "10.0.17763") >= 0
+            DllCall("uxtheme\SetWindowTheme", "Ptr", ctrl.Hwnd, "Str", "DarkMode_Explorer", "Ptr", 0)
+    }
+    try ctrl.SetFont("s9 norm", THEME["fontFamily"])
+    return ctrl
 }
 
 ; ══════════════════════════════════════════════════════════════════════════

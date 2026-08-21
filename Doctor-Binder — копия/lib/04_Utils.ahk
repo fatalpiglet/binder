@@ -20,7 +20,7 @@ LogError(err, context := "") {
     msg := (IsObject(err) && err.HasOwnProp("Message")) ? err.Message : String(err)
     if (context != "")
         msg := context " — " msg
-    OutputDebug("❌ " msg)
+    OutputDebug(msg)
     Log(msg, "ERROR")
 }
 
@@ -98,14 +98,16 @@ MarkUnsaved() {
     ; Проверяем, существует ли кнопка физически
     if IsObject(g_BtnGlobalSave) && g_BtnGlobalSave.HasOwnProp("ctrl") {
         try {
-            ; Включаем кнопку (зеленая)
-            UpdateButtonState(g_BtnGlobalSave, true, "success")
-            g_BtnGlobalSave.ctrl.Text := "Сохранить изменения (!)"
+            ; SAVE становится primary action (cyan)
+            UpdateButtonState(g_BtnGlobalSave, true, "primary")
+            g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
         }
     }
+    ; Нижний status bar: ● UNSAVED CHANGES
+    try UpdateSaveBar(true)
 }
 
-UpdateButtonState(btnObj, isActive, style := "success") {
+UpdateButtonState(btnObj, isActive, style := "primary") {
     global THEME
     if !IsObject(btnObj)
         return
@@ -161,7 +163,8 @@ CheckProfileDirty(*) {
         if (MainGui["ProfileSpecialty"].Value != STATE["specialty"])
             isDirty := true
         
-        UpdateButtonState(g_BtnSaveProfile, isDirty, "success")
+        UpdateButtonState(g_BtnSaveProfile, isDirty, "primary")
+        UpdateProfileStatus(isDirty)
     }
 }
 
@@ -225,7 +228,7 @@ CheckSettingsDirty(*) {
         if (MainGui["SettingsAutoScreen"].Value != (CFG["autoScreen"] ? 1 : 0))
             isDirty := true
         
-        UpdateButtonState(g_BtnSaveSettings, isDirty, "success")
+        UpdateButtonState(g_BtnSaveSettings, isDirty, "primary")
     }
 }
 

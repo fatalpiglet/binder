@@ -154,7 +154,7 @@ LoadINIProfile(filePath) {
             }
         }
         
-        ShowNotify("✅ Профиль загружен!", "success")
+        ShowNotify("Профиль загружен!", "success")
         MarkUnsaved()
         
     } catch as err {

@@ -31,7 +31,7 @@ OpenBindEditor(slotNum) {
     
     EditorGui := Gui("-Resize -Caption +Border +Owner" MainGui.Hwnd, "Bind Editor")
     EditorGui.BackColor := THEME["bg"]
-    EditorGui.SetFont("s10 c" THEME["text"], "Segoe UI")
+    EditorGui.SetFont("s10 c" THEME["text"], THEME["fontFamily"])
     EditorGui.OnEvent("Close", (*) => SafeCloseEditor())
     
     try {
@@ -42,102 +42,97 @@ OpenBindEditor(slotNum) {
     }
     
     ; --- СОВРЕМЕННАЯ ШАПКА ---
-    EditorGui.SetFont("s12 bold", "Segoe UI")
-    EditorGui.AddText("x22 y14 w520 h28 c" THEME["text"] " BackgroundTrans", "Редактор бинда")
-    EditorGui.SetFont("s9", "Segoe UI")
-    EditorGui.AddText("x22 y40 w560 h20 c" THEME["textDim"] " BackgroundTrans", "Настройте горячую клавишу, текст и задержки")
+    EditorGui.AddText("x0 y0 w" totalW " h60 Background" THEME["surface"], "")
+    EditorGui.AddText("x0 y59 w" totalW " h1 Background" THEME["border"], "")
+
+    EditorGui.SetFont("s13 bold", THEME["fontFamily"])
+    EditorGui.AddText("x22 y12 w520 h24 c" THEME["textTitle"] " BackgroundTrans", "Редактор бинда")
+    EditorGui.SetFont("s8 norm", THEME["fontFamily"])
+    EditorGui.AddText("x23 y38 w560 h16 c" THEME["textMuted"] " BackgroundTrans", "Горячая клавиша, текст сообщений и задержки")
 
     bindTitle := slot["name"] != "" ? slot["name"] : "Новый бинд"
-    EditorGui.SetFont("s9 bold", "Segoe UI")
-    EditorGui.AddText("x640 y18 w240 h24 Right c" THEME["accent"] " BackgroundTrans", bindTitle)
+    EditorGui.SetFont("s8 bold", THEME["fontFamily"])
+    EditorGui.AddText("x620 y24 w300 h18 Right c" THEME["textDim"] " BackgroundTrans", bindTitle)
 
-    CloseBtn := CreateStyledButton(EditorGui, totalW - 48, 8, 36, 36, "x", (*) => SafeCloseEditor(), "danger")
-    CloseBtn.ctrl.SetFont("s11 bold", "Segoe UI")
+    CloseBtn := CreateStyledButton(EditorGui, totalW - 46, 14, 32, 32, "×", (*) => SafeCloseEditor(), "icon")
+    CloseBtn.SetBackdrop(THEME["surface"])
+    CloseBtn.ctrl.SetFont("s12 norm", "Segoe UI")
 
     ; --- КАРТОЧКА ОСНОВНЫХ ПАРАМЕТРОВ ---
-    yInfo := 72
+    yInfo := 78
     cardW := totalW - 40
-    cardH := 82
+    cardH := 90
     xCard := 20
-    infoCard := EditorGui.AddText("x" xCard " y" yInfo " w" cardW " h" cardH " Background" THEME["bgLight"], "")
-    RoundCorners(infoCard, cardW, cardH, 14)
-    SendPanelToBack(infoCard)
+    CreateCard(EditorGui, xCard, yInfo, cardW, cardH)
 
-    yRow := yInfo + 28
+    yRow := yInfo + 36
     xIn := xCard + 20
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" xIn " y" (yRow-18) " w200 c" THEME["textDim"] " BackgroundTrans", "НАЗВАНИЕ БИНДА")
-    EditorGui.SetFont("s10", "Segoe UI")
-    nameBox := EditorGui.AddEdit("x" xIn " y" yRow " w250 h32 Background" THEME["bgHighlight"] " c" THEME["text"] " vEditorName", slot["name"])
-    RoundCorners(nameBox, 250, 32, 8)
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 200, "НАЗВАНИЕ БИНДА")
+    CreateInput(EditorGui, xIn, yRow, 250, THEME["inputH"], "vEditorName", slot["name"], 10)
     xIn += 270
 
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" xIn " y" (yRow-18) " w130 c" THEME["textDim"] " BackgroundTrans", "ГОРЯЧАЯ КЛАВИША")
-    hkDisplay := slot["hotkey"] = "" ? "Нажмите..." : FormatHotkey(slot["hotkey"])
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "ГОРЯЧАЯ КЛАВИША")
+    hkDisplay := slot["hotkey"] = "" ? "Нажмите…" : FormatHotkey(slot["hotkey"])
     hkColor := slot["hotkey"] = "" ? THEME["textMuted"] : THEME["accent"]
-    EditorGui.SetFont("s10 bold", "Segoe UI")
-    EditorKeyButton := CreateStyledButton(EditorGui, xIn, yRow, 130, 32, hkDisplay, (*) => EditorStartCapture(), "default")
+    EditorKeyButton := CreateStyledButton(EditorGui, xIn, yRow, 130, THEME["inputH"], hkDisplay, (*) => EditorStartCapture(), "default")
     EditorKeyButton.ctrl.Name := "EditorKeyDisplay"
-    EditorKeyButton.SetVisual(THEME["bgHighlight"], hkColor, THEME["bgHover"])
+    EditorKeyButton.SetBackdrop(THEME["card"])
+    EditorKeyButton.SetVisual(THEME["field"], hkColor, THEME["bgHover"], THEME["fieldBorder"])
+    EditorKeyButton.ctrl.SetFont("s9 bold", THEME["fontMono"])
     EditorKeyDisplay := EditorKeyButton.ctrl
     EditorGui.AddEdit("x0 y0 w0 h0 Hidden vEditorHotkey", slot["hotkey"])
     xIn += 150
 
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" xIn " y" (yRow-18) " w130 c" THEME["textDim"] " BackgroundTrans", "КАТЕГОРИЯ")
-    EditorGui.SetFont("s9", "Segoe UI")
-    categoryBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w130 h32 vEditorCategory Choose1 Background" THEME["bgHighlight"] " c" THEME["text"], ["Основные", "Лечение", "Медосмотр", "Вакцины", "Операции", "Быстрые", "Утилиты"])
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 130, "КАТЕГОРИЯ")
+    EditorGui.SetFont("s9", THEME["fontFamily"])
+    categoryBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w130 h" THEME["inputH"] " vEditorCategory Choose1 Background" THEME["field"] " c" THEME["text"], ["Основные", "Лечение", "Медосмотр", "Вакцины", "Операции", "Быстрые", "Утилиты"])
+    SetDarkControl(categoryBox)
     xIn += 150
 
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" xIn " y" (yRow-18) " w120 c" THEME["textDim"] " BackgroundTrans", "В СТАТИСТИКУ")
-    EditorGui.SetFont("s9", "Segoe UI")
-    statBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w120 h32 vEditorStatTypeVisible Choose1 Background" THEME["bgHighlight"] " c" THEME["text"], ["—", "Таблетки", "Уколы", "Операции", "Медкарты", "Вакцины"])
+    CreateFieldLabel(EditorGui, xIn, yRow - 20, 120, "В СТАТИСТИКУ")
+    EditorGui.SetFont("s9", THEME["fontFamily"])
+    statBox := EditorGui.AddDropDownList("x" xIn " y" yRow " w120 h" THEME["inputH"] " vEditorStatTypeVisible Choose1 Background" THEME["field"] " c" THEME["text"], ["—", "Таблетки", "Уколы", "Операции", "Медкарты", "Вакцины"])
+    SetDarkControl(statBox)
     EditorGui.AddDropDownList("x0 y0 w0 Hidden vEditorStatType Choose1", ["", "pills", "inject", "operation", "medcheck", "vaccine"])
     SetEditorDropdowns(slot)
     SetEditorStatTypeVisible(slot)
     EditorGui["EditorStatTypeVisible"].OnEvent("Change", (*) => SyncStatTypeFromVisible())
     xIn += 140
 
-    EditorGui.SetFont("s9 bold", "Segoe UI")
-    EditorGui.AddCheckbox("x" xIn " y" (yRow+5) " w100 vEditorEnabled c" THEME["success"] " Checked" (slot["enabled"] ? 1 : 0) " Background" THEME["bgLight"], " Активен")
+    EditorGui.SetFont("s9 norm", THEME["fontFamily"])
+    StyleCheckbox(EditorGui.AddCheckbox("x" xIn " y" (yRow+7) " w100 vEditorEnabled c" THEME["text"] " Checked" (slot["enabled"] ? 1 : 0) " Background" THEME["card"], " Активен"))
 
     ; --- ОСНОВНАЯ ОБЛАСТЬ ---
     yMain := yInfo + cardH + 16
     leftW := 420
-    mainH := 505
+    mainH := 490
 
-    leftCard := EditorGui.AddText("x" xCard " y" yMain " w" leftW " h" mainH " Background" THEME["bgLight"], "")
-    RoundCorners(leftCard, leftW, mainH, 14)
-    SendPanelToBack(leftCard)
+    CreateCard(EditorGui, xCard, yMain, leftW, mainH)
     xRight := xCard + leftW + 20
     rightW := totalW - 40 - leftW - 20
-    rightCard := EditorGui.AddText("x" xRight " y" yMain " w" rightW " h" mainH " Background" THEME["bgLight"], "")
-    RoundCorners(rightCard, rightW, mainH, 14)
-    SendPanelToBack(rightCard)
+    CreateCard(EditorGui, xRight, yMain, rightW, mainH)
 
     ; --- ЛЕВАЯ: СТРОКИ ---
-    EditorGui.SetFont("s11 bold", "Segoe UI")
-    EditorGui.AddText("x" (xCard+18) " y" (yMain+16) " w200 c" THEME["text"] " BackgroundTrans", "Строки бинда")
-    EditorGui.SetFont("s9", "Segoe UI")
+    EditorGui.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
+    EditorGui.AddText("x" (xCard+18) " y" (yMain+16) " w200 c" THEME["text"] " BackgroundTrans", "СТРОКИ БИНДА")
+    EditorGui.SetFont("s8", THEME["fontFamily"])
     EditorGui.AddText("x" (xCard+leftW-125) " y" (yMain+19) " w105 Right c" THEME["textDim"] " BackgroundTrans vEditorLineCount", slot["lines"].Length " строк")
 
     yTool := yMain + 50
-    CreateOutlineBtn(EditorGui, xCard+18, yTool, 108, 34, "+ Добавить", (*) => EditorAddRow(), "success")
-    CreateOutlineBtn(EditorGui, xCard+134, yTool, 42, 34, "▲", (*) => EditorMoveUp(), "default")
-    CreateOutlineBtn(EditorGui, xCard+182, yTool, 42, 34, "▼", (*) => EditorMoveDown(), "default")
-    CreateOutlineBtn(EditorGui, xCard+230, yTool, 52, 34, "Копия", (*) => EditorDuplicateRow(), "info")
-    CreateOutlineBtn(EditorGui, xCard+290, yTool, 62, 34, "Удалить", (*) => EditorDeleteRow(), "danger")
+    CreateOutlineBtn(EditorGui, xCard+18, yTool, 108, 34, "Добавить", (*) => EditorAddRow(), "primary").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xCard+134, yTool, 42, 34, "▲", (*) => EditorMoveUp(), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xCard+182, yTool, 42, 34, "▼", (*) => EditorMoveDown(), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xCard+230, yTool, 52, 34, "Копия", (*) => EditorDuplicateRow(), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xCard+290, yTool, 62, 34, "Удалить", (*) => EditorDeleteRow(), "default").SetBackdrop(THEME["card"])
 
-    EditorGui.AddText("x" (xCard+18) " y" (yTool+42) " w" (leftW-36) " h1 Background" THEME["borderLight"], "")
+    EditorGui.AddText("x" (xCard+18) " y" (yTool+42) " w" (leftW-36) " h1 Background" THEME["border"], "")
 
     lvY := yTool + 55
     lvH := mainH - (lvY - yMain) - 16
     EditorGui.SetFont("s9", "Segoe UI")
     lv := EditorGui.AddListView("x" (xCard+18) " y" lvY " w" (leftW-36) " h" lvH
-        " Background" THEME["bg"] " c" THEME["text"]
-        " vEditorLV -Hdr -Multi +LV0x4000", ["№", "Текст", "⏱"])
+        " Background" THEME["bgElevated"] " c" THEME["textBody"]
+        " vEditorLV -Hdr -Multi +LV0x4000", ["№", "Текст", "мс"])
     SetDarkControl(lv)
     lv.ModifyCol(1, 35)
     lv.ModifyCol(2, leftW-130)
@@ -150,68 +145,66 @@ OpenBindEditor(slotNum) {
     }
 
     ; --- ПРАВАЯ: РЕДАКТИРОВАНИЕ ---
-    EditorGui.SetFont("s11 bold", "Segoe UI")
-    EditorGui.AddText("x" (xRight+18) " y" (yMain+16) " w220 c" THEME["text"] " BackgroundTrans", "Редактирование")
-    EditorGui.SetFont("s9", "Segoe UI")
+    EditorGui.SetFont("s" THEME["fontSection"] " bold", THEME["fontFamily"])
+    EditorGui.AddText("x" (xRight+18) " y" (yMain+16) " w220 c" THEME["text"] " BackgroundTrans", "РЕДАКТИРОВАНИЕ")
+    EditorGui.SetFont("s8", THEME["fontFamily"])
     EditorGui.AddText("x" (xRight+rightW-150) " y" (yMain+19) " w130 Right c" THEME["textDim"] " BackgroundTrans vEditorRowLabel", "Строка не выбрана")
 
     yTags := yMain + 52
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" (xRight+18) " y" (yTags+8) " w40 c" THEME["textDim"] " BackgroundTrans", "ТЕГИ")
-    CreateOutlineBtn(EditorGui, xRight+62, yTags, 48, 28, "{P}", (*) => EditorInsertTag("{P}"), "info")
-    CreateOutlineBtn(EditorGui, xRight+116, yTags, 58, 28, "{MY}", (*) => EditorInsertTag("{MY}"), "info")
-    CreateOutlineBtn(EditorGui, xRight+180, yTags, 72, 28, "{HOSP}", (*) => EditorInsertTag("{HOSPITAL}"), "info")
-    CreateOutlineBtn(EditorGui, xRight+258, yTags, 72, 28, "{SPEC}", (*) => EditorInsertTag("{SPECIALTY}"), "info")
+    CreateFieldLabel(EditorGui, xRight+18, yTags+9, 40, "ТЕГИ")
+    CreateOutlineBtn(EditorGui, xRight+62, yTags, 48, 30, "{P}", (*) => EditorInsertTag("{P}"), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+116, yTags, 58, 30, "{MY}", (*) => EditorInsertTag("{MY}"), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+180, yTags, 72, 30, "{HOSP}", (*) => EditorInsertTag("{HOSPITAL}"), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+258, yTags, 72, 30, "{SPEC}", (*) => EditorInsertTag("{SPECIALTY}"), "default").SetBackdrop(THEME["card"])
 
     yCmds := yTags + 36
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" (xRight+18) " y" (yCmds+8) " w100 c" THEME["textDim"] " BackgroundTrans", "КОМАНДЫ")
-    CreateOutlineBtn(EditorGui, xRight+118, yCmds, 48, 28, "/я", (*) => EditorInsertTag("/я "), "default")
-    CreateOutlineBtn(EditorGui, xRight+172, yCmds, 48, 28, "/фд", (*) => EditorInsertTag("/фд "), "default")
-    CreateOutlineBtn(EditorGui, xRight+226, yCmds, 48, 28, "/де", (*) => EditorInsertTag("/де "), "default")
-    CreateOutlineBtn(EditorGui, xRight+280, yCmds, 72, 28, "/шепот", (*) => EditorInsertTag("/шепот "), "default")
+    CreateFieldLabel(EditorGui, xRight+18, yCmds+9, 100, "КОМАНДЫ")
+    CreateOutlineBtn(EditorGui, xRight+118, yCmds, 48, 30, "/я", (*) => EditorInsertTag("/я "), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+172, yCmds, 48, 30, "/фд", (*) => EditorInsertTag("/фд "), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+226, yCmds, 48, 30, "/де", (*) => EditorInsertTag("/де "), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+280, yCmds, 72, 30, "/шепот", (*) => EditorInsertTag("/шепот "), "default").SetBackdrop(THEME["card"])
 
-    yEdit := yCmds + 38
-    hEdit := 178
-    EditorGui.SetFont("s10", "Segoe UI")
-    EditorEditBox := EditorGui.AddEdit("x" (xRight+18) " y" yEdit " w" (rightW-36) " h" hEdit " vCurrentLineText Background" THEME["bgHighlight"] " c" THEME["text"] " Disabled", "")
+    yEdit := yCmds + 54
+    hEdit := 52     ; однострочное поле строки бинда (остальное место — предпросмотру)
+    CreateFieldLabel(EditorGui, xRight+18, yEdit-16, 200, "ТЕКСТ СТРОКИ")
+    editField := CreateInput(EditorGui, xRight+18, yEdit, rightW-36, hEdit, "vCurrentLineText Disabled", "", 10, THEME["card"])
+    EditorEditBox := editField.ctrl
     SetDarkControl(EditorEditBox)
     EditorEditBox.OnEvent("Change", EditorSyncText)
-    RoundCorners(EditorEditBox, rightW-36, hEdit, 9)
 
     ; --- ЗАДЕРЖКА ---
     yDelay := yEdit + hEdit + 12
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" (xRight+18) " y" (yDelay+8) " w90 c" THEME["textDim"] " BackgroundTrans", "ЗАДЕРЖКА")
-    EditorGui.SetFont("s9", "Segoe UI")
-    EditorDelayBox := EditorGui.AddEdit("x" (xRight+108) " y" yDelay " w80 h30 Number Center vCurrentLineDelay Background" THEME["bgHighlight"] " c" THEME["text"] " Disabled", "")
-    RoundCorners(EditorDelayBox, 80, 30, 8)
+    CreateFieldLabel(EditorGui, xRight+18, yDelay+11, 90, "ЗАДЕРЖКА")
+    delayField := CreateInput(EditorGui, xRight+108, yDelay, 80, 32, "Number Center vCurrentLineDelay Disabled", "", 9, THEME["card"])
+    EditorDelayBox := delayField.ctrl
     EditorDelayBox.OnEvent("Change", EditorHandleDelayInput)
 
-    BtnConfirmDelay := CreateOutlineBtn(EditorGui, xRight+198, yDelay, 38, 30, "✓", (*) => EditorConfirmDelay(), "success")
+    BtnConfirmDelay := CreateOutlineBtn(EditorGui, xRight+198, yDelay, 38, 32, "✓", (*) => EditorConfirmDelay(), "primary")
+    BtnConfirmDelay.SetBackdrop(THEME["card"])
     OutlineSetVisible(BtnConfirmDelay, false)
-    CreateOutlineBtn(EditorGui, xRight+244, yDelay, 50, 30, "1200", (*) => EditorSetDelay(1200), "default")
-    CreateOutlineBtn(EditorGui, xRight+300, yDelay, 50, 30, "2300", (*) => EditorSetDelay(2300), "default")
-    CreateOutlineBtn(EditorGui, xRight+356, yDelay, 108, 30, "Применить всем", (*) => EditorApplyDelayToAll(), "warning")
+    CreateOutlineBtn(EditorGui, xRight+244, yDelay, 50, 32, "1200", (*) => EditorSetDelay(1200), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+300, yDelay, 50, 32, "2300", (*) => EditorSetDelay(2300), "default").SetBackdrop(THEME["card"])
+    CreateOutlineBtn(EditorGui, xRight+356, yDelay, 108, 32, "Применить всем", (*) => EditorApplyDelayToAll(), "default").SetBackdrop(THEME["card"])
 
     ; --- ПРЕДПРОСМОТР ---
-    yPreview := yDelay + 42
+    yPreview := yDelay + 44
     hPreview := mainH - (yPreview - yMain) - 16
-    preview := EditorGui.AddText("x" (xRight+18) " y" yPreview " w" (rightW-36) " h" hPreview " Background" THEME["bg"], "")
-    RoundCorners(preview, rightW-36, hPreview, 9)
+    preview := EditorGui.AddText("x" (xRight+18) " y" yPreview " w" (rightW-36) " h" hPreview " Background" THEME["bgElevated"], "")
+    RoundCorners(preview, rightW-36, hPreview, THEME["radiusSm"])
     SendPanelToBack(preview)
-    EditorGui.SetFont("s8 bold", "Segoe UI")
-    EditorGui.AddText("x" (xRight+30) " y" (yPreview+8) " w220 c" THEME["accent"] " BackgroundTrans", "ПРЕДПРОСМОТР")
-    EditorGui.SetFont("s9", "Segoe UI")
+    CreateFieldLabel(EditorGui, xRight+30, yPreview+10, 220, "ПРЕДПРОСМОТР")
+    EditorGui.SetFont("s9", THEME["fontFamily"])
     EditorGui.AddText("x" (xRight+30) " y" (yPreview+30) " w" (rightW-60) " h" (hPreview-38) " c" THEME["text"] " BackgroundTrans vEditorPreview", "Выберите строку...")
 
     ; --- ПОДВАЛ ---
-    yFooter := yMain + mainH + 16
-    EditorGui.AddText("x20 y" (yFooter-8) " w" (totalW-40) " h1 Background" THEME["borderLight"], "")
-    CreateOutlineBtn(EditorGui, 20, yFooter, 210, 44, "Сохранить изменения", (*) => SaveModernEditor(), "success")
-    EditorGui.SetFont("s8 italic", "Segoe UI")
-    EditorGui.AddText("x250 y" (yFooter+13) " w480 Center c" THEME["textMuted"] " BackgroundTrans", "Изменения применяются после сохранения")
-    CreateOutlineBtn(EditorGui, totalW-190, yFooter, 170, 44, "Отмена", (*) => SafeCloseEditor(), "default")
+    yFooter := yMain + mainH + 20
+    EditorGui.AddText("x20 y" (yFooter-12) " w" (totalW-40) " h1 Background" THEME["border"], "")
+    EditorGui.SetFont("s8 norm", THEME["fontFamily"])
+    EditorGui.AddText("x22 y" (yFooter+12) " w420 c" THEME["textMuted"] " BackgroundTrans", "Изменения применяются после сохранения")
+    CreateOutlineBtn(EditorGui, totalW-400, yFooter, 170, 40, "Отмена", (*) => SafeCloseEditor(), "default").SetBackdrop(THEME["bg"])
+    btnSaveBind := CreateOutlineBtn(EditorGui, totalW-210, yFooter, 190, 40, "СОХРАНИТЬ БИНД", (*) => SaveModernEditor(), "primary")
+    btnSaveBind.SetBackdrop(THEME["bg"])
+    btnSaveBind.ctrl.SetFont("s8 bold", THEME["fontFamily"])
 
     if (lv.GetCount() > 0) {
         lv.Modify(1, "Select Focus")
@@ -520,7 +513,7 @@ SaveModernEditor() {
         RegisterAllHotkeys()
         MarkUnsaved()
         
-        ShowNotify("✅ Бинд сохранён!", "success")
+        ShowNotify("Бинд сохранён!", "success")
         
     } catch as err {
         ShowNotify("Ошибка: " err.Message, "error")
@@ -571,12 +564,13 @@ SafeCloseEditor() {
         ; Обновляем визуальное состояние большой кнопки "Сохранить все"
         if g_BtnGlobalSave {
             if GlobalUnsavedChanges {
-                UpdateButtonState(g_BtnGlobalSave, true, "warning")
-                g_BtnGlobalSave.ctrl.Text := "Сохранить изменения (!)"
+                UpdateButtonState(g_BtnGlobalSave, true, "primary")
+                g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
             } else {
                 UpdateButtonState(g_BtnGlobalSave, false)
-                g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
+                g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ"
             }
+            try UpdateSaveBar(GlobalUnsavedChanges)
         }
         ; ===================
     }
@@ -594,8 +588,8 @@ EditorStartCapture() {
         return
         
     ; Визуальный старт
-    EditorKeyDisplay.Text := ">>> НАЖМИТЕ КЛАВИШУ <<<"
-    SetButtonVisualByControl(EditorKeyDisplay, THEME["warning"], THEME["bgHighlight"])
+    EditorKeyDisplay.Text := "НАЖМИТЕ КЛАВИШУ…"
+    SetButtonVisualByControl(EditorKeyDisplay, THEME["accent"], THEME["field"])
     EditorBlinkState := true
     SetTimer(EditorCaptureBlink, 500)
     

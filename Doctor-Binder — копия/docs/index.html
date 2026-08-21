@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Doctor Binder v2.1 — UI preview</title>
+<style>
+  :root{
+    --bg:#080A0F; --surface:#0D1016; --elevated:#111722; --hover:#151D28;
+    --selected:#0F1E29; --field:#0D141D; --field-border:#202D3B;
+    --border:#202833; --border-hover:#344252;
+    --text:#F2F4F7; --text-title:#F7F9FC; --dim:#9AA4B2; --muted:#626D7B;
+    --accent:#38BDF8; --accent-soft:#103746; --accent-dark:#1C5F7D;
+    --success:#35C98A; --warn:#D9A75C; --danger:#E66B83;
+    --mono:"Consolas","SF Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070b;font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;gap:18px;padding:28px 12px 48px;color:var(--text)}
+  .caption{color:#5b6675;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .app{width:960px;height:760px;background:var(--bg);border:1px solid #171d27;border-radius:10px;
+       overflow:hidden;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.65)}
+
+  /* ---------- header ---------- */
+  .header{height:60px;background:var(--surface);border-bottom:1px solid var(--border);
+          display:flex;align-items:center;padding:0 14px 0 20px;gap:12px}
+  .brand{width:32px;height:32px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
+         display:grid;place-items:center;font-size:17px;box-shadow:0 0 0 1px #16303c}
+  .brand-txt b{display:block;font-size:15px;letter-spacing:.04em;color:var(--text-title);font-weight:700}
+  .brand-txt span{display:block;font-size:9.5px;letter-spacing:.14em;color:var(--muted);margin-top:2px}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:18px}
+  .hstatus{display:flex;flex-direction:column;gap:4px;min-width:150px}
+  .close{width:32px;height:32px;border-radius:8px;border:1px solid #1a212c;color:#8d97a5;
+         display:grid;place-items:center;font-size:15px;background:var(--surface)}
+
+  /* status dots */
+  .dot{display:inline-flex;align-items:center;gap:9px;font-size:10px;font-weight:700;letter-spacing:.12em}
+  .dot::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;
+               box-shadow:0 0 0 3px color-mix(in srgb, currentColor 22%, transparent)}
+  .ok{color:var(--success)} .idle{color:var(--dim)} .warn{color:var(--warn)} .err{color:var(--danger)}
+  .meta{font-size:9.5px;letter-spacing:.12em;color:var(--muted)}
+
+  /* ---------- nav ---------- */
+  .nav{height:42px;background:var(--surface);border-bottom:1px solid var(--border);
+       display:flex;align-items:center;padding:0 20px;gap:8px;position:relative}
+  .tab{height:30px;width:142px;border-radius:8px;display:grid;place-items:center;font-size:12px;color:var(--dim)}
+  .tab.active{background:var(--selected);color:var(--accent);border:1px solid var(--accent-dark);
+              font-weight:600;box-shadow:0 0 0 3px rgba(56,189,248,.06)}
+  .indicator{position:absolute;left:38px;bottom:0;width:114px;height:2px;background:var(--accent)}
+
+  /* ---------- page ---------- */
+  .page{padding:14px 20px 0}
+  .page-title{font-size:17px;font-weight:600;color:var(--text-title)}
+  .page-sub{font-size:11px;color:var(--muted);margin-top:5px}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:14px;
+             border-bottom:1px solid var(--border)}
+  .grid{display:grid;grid-template-columns:repeat(3,296px);gap:16px;margin-top:17px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;height:466px;padding:18px;
+        display:flex;flex-direction:column}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;
+             border-bottom:1px solid var(--border);margin:-2px 0 0}
+  .card-head b{font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--text)}
+  .card-head i{font-style:normal;font-size:10px;color:var(--muted);letter-spacing:.1em}
+  .label{font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:18px 0 6px}
+  .input{height:34px;border-radius:6px;background:var(--field);border:1px solid var(--field-border);
+         display:flex;align-items:center;padding:0 11px;font-size:13px;color:var(--text)}
+  .input.focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.13)}
+  .input.big{height:46px;justify-content:center;font-family:var(--mono);font-size:19px;color:var(--accent);letter-spacing:.08em}
+  .row{display:flex;gap:6px}
+  .btn{height:36px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:#E6EAF0;
+       display:flex;align-items:center;justify-content:center;font-size:12px;flex:1}
+  .btn.primary{background:#0E2A37;border-color:var(--accent-dark);color:#CFEEFF;
+               box-shadow:0 0 0 3px rgba(56,189,248,.07)}
+  .btn.sm{height:34px;width:46px;flex:none;font-size:11px}
+  .btn.wide{width:100%;flex:none}
+  .action{height:42px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);
+          display:flex;align-items:center;justify-content:space-between;padding:0 15px;font-size:12.5px;
+          color:#E6EAF0;margin-bottom:10px}
+  .action span{color:var(--muted);font-size:13px}
+  .hint{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px}
+  .value{font-family:var(--mono);font-size:21px;color:var(--text);margin-top:6px}
+  .sep{height:1px;background:var(--border);margin:18px 0 0}
+  .kv{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:9px}
+  .kv b{font-family:var(--mono);font-weight:600;color:var(--dim)}
+  .spacer{flex:1}
+
+  /* ---------- bottom bar ---------- */
+  .bar{position:absolute;left:20px;right:20px;bottom:32px;border-top:1px solid var(--border);
+       padding-top:16px;display:flex;align-items:center;gap:10px}
+  .bar .btn{flex:none;width:120px}
+  .bar .btn.primary{width:170px;letter-spacing:.08em;font-size:11px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="caption">Doctor Binder v2.1 · Обзор · premium dark redesign</div>
+
+<div class="app">
+  <div class="header">
+    <div class="brand">✚</div>
+    <div class="brand-txt"><b>DOCTOR BINDER</b><span>MEDICAL OPERATIONS CONSOLE · v2.1</span></div>
+    <div class="header-right">
+      <div class="hstatus">
+        <div class="dot ok">SYSTEM READY</div>
+        <div class="meta">AUTOSAVE ON · 21:04</div>
+      </div>
+      <div class="close">×</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="tab active">Обзор</div>
+    <div class="tab">Бинды</div>
+    <div class="tab">Настройки</div>
+    <div class="tab">Статистика</div>
+    <div class="tab">Помощь</div>
+    <div class="indicator"></div>
+  </div>
+
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <div class="page-title">Обзор</div>
+        <div class="page-sub">Профиль врача, активная сессия и быстрые действия</div>
+      </div>
+      <div class="meta">WORKSTATION · v2.1</div>
+    </div>
+
+    <div class="grid">
+      <!-- 01 -->
+      <div class="card">
+        <div class="card-head"><b>ЛИЧНОЕ ДЕЛО</b><i>01</i></div>
+        <div class="label">ИМЯ ФАМИЛИЯ</div>
+        <div class="row"><div class="input" style="flex:1">Max Mcqueen</div><div class="btn sm">Авто</div></div>
+        <div class="label">БОЛЬНИЦА</div>
+        <div class="input">MCLV</div>
+        <div class="label">СПЕЦИАЛЬНОСТЬ</div>
+        <div class="input">Интерн</div>
+        <div class="sep"></div>
+        <div style="margin-top:16px"><span class="dot ok">PROFILE SAVED</span></div>
+        <div class="hint">Данные подставляются в бинды как {MY}, {HOSPITAL} и {SPECIALTY}.</div>
+        <div class="spacer"></div>
+        <div class="btn wide" style="height:38px;color:var(--muted);background:var(--surface)">СОХРАНИТЬ ПРОФИЛЬ</div>
+      </div>
+
+      <!-- 02 -->
+      <div class="card">
+        <div class="card-head"><b>ТЕКУЩИЙ ПАЦИЕНТ</b><i>02</i></div>
+        <div class="label">ID ПАЦИЕНТА</div>
+        <div class="input big focus">4721</div>
+        <div class="row" style="margin-top:20px"><div class="btn primary">Принять</div><div class="btn">Сброс</div></div>
+        <div class="sep"></div>
+        <div style="margin-top:16px"><span class="dot ok">ACTIVE</span></div>
+        <div class="hint" style="margin-top:8px">Сессия пациента инициализирована</div>
+        <div class="label">ОТОБРАЖЕНИЕ В ЧАТЕ</div>
+        <div class="value">"4721</div>
+        <div class="label">ФОРМАТ ВСТАВКИ</div>
+        <div style="font-size:12.5px;color:var(--dim)">"ID · кавычка</div>
+        <div class="hint">ID подставляется в сообщения как {P}</div>
+      </div>
+
+      <!-- 03 -->
+      <div class="card">
+        <div class="card-head"><b>БЫСТРОЕ УПРАВЛЕНИЕ</b><i>03</i></div>
+        <div style="height:16px"></div>
+        <div class="action">Оверлей<span>→</span></div>
+        <div class="action">Обновить бинды<span>↻</span></div>
+        <div class="action">Загрузить профиль<span>↓</span></div>
+        <div class="action">Сохранить профиль<span>↑</span></div>
+        <div class="action">Справка и поддержка<span>?</span></div>
+        <div class="sep"></div>
+        <div class="label">ГОРЯЧИЕ КЛАВИШИ</div>
+        <div class="kv"><span>Меню биндера</span><b>F9</b></div>
+        <div class="kv"><span>Оверлей</span><b>F10</b></div>
+        <div class="kv"><span>Стоп отправки</span><b>F8</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <span class="dot ok">ALL CHANGES SAVED</span>
+    <div style="flex:1"></div>
+    <div class="btn">Отменить</div>
+    <div class="btn primary">СОХРАНИТЬ</div>
+  </div>
+</div>
+
+<div class="caption">состояния: ожидание пациента · несохранённые изменения · ошибка</div>
+<div class="app" style="height:210px">
+  <div class="header" style="height:auto;padding:16px 20px;align-items:flex-start;gap:40px;background:var(--bg);border:none">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <span class="dot idle">WAITING FOR PATIENT</span>
+      <span class="dot ok">ACTIVE</span>
+      <span class="dot warn">UNSAVED CHANGES</span>
+      <span class="dot err">ERROR</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:260px">
+      <div class="input">обычное поле</div>
+      <div class="input focus">поле в фокусе</div>
+      <div class="input" style="border-color:var(--border-hover)">поле под курсором</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:200px">
+      <div class="btn">Вторичная кнопка</div>
+      <div class="btn primary">PRIMARY ACTION</div>
+      <div class="btn" style="color:var(--muted);background:var(--surface)">Disabled</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -47,7 +47,7 @@ CreateOverlayGuiBase(mode := "full") {
         OverlayGui.AddText("x15 y" (y+3) " w60 c" THEME["textDim"] " BackgroundTrans", "Пациент:")
         
         OverlayGui.SetFont("s10 bold", "Consolas")
-        OverlayGui.AddEdit("x80 y" y " w80 h24 Background" THEME["bgHighlight"] " c" THEME["accent"] " vMiniInputId Center Hidden", "")
+        OverlayGui.AddEdit("x80 y" y " w80 h24 Background" THEME["field"] " c" THEME["accent"] " vMiniInputId Center Hidden", "")
         OverlayGui.AddText("x80 y" (y+3) " w80 c" THEME["textMuted"] " vMiniPatient BackgroundTrans", "—")
         
         OverlayGui.SetFont("s9 bold", "Segoe UI")
@@ -77,7 +77,7 @@ CreateOverlayGuiBase(mode := "full") {
     OverlayGui.AddText("x80 y10 w80 c" THEME["textMuted"] " BackgroundTrans vOvPatient", "—")
     
     OverlayGui.SetFont("s10 bold", "Consolas")
-    OverlayGui.AddEdit("x80 y8 w80 h24 Background" THEME["bgHighlight"] " c" THEME["accent"] " vOvInputId Center Hidden", "")
+    OverlayGui.AddEdit("x80 y8 w80 h24 Background" THEME["field"] " c" THEME["accent"] " vOvInputId Center Hidden", "")
     
     ; Статус (Подвинули правее под ширину 360)
     OverlayGui.SetFont("s9 bold", "Segoe UI")
@@ -141,7 +141,7 @@ BuildMiniOverlay() {
     
     if (STATE["overlayInputMode"]) {
         OverlayGui.SetFont("s10 bold", "Consolas")
-        OverlayGui.AddEdit("x100 y" y " w150 h26 Background" THEME["bgHighlight"] " c" THEME["accent"] " vMiniInputId ReadOnly Center", STATE["tempId"])
+        OverlayGui.AddEdit("x100 y" y " w150 h26 Background" THEME["field"] " c" THEME["accent"] " vMiniInputId ReadOnly Center", STATE["tempId"])
         OverlayGui.SetFont("s8", "Segoe UI")
         OverlayGui.AddText("x16 y" (y+32) " w" (w-32) " c" THEME["warning"] " Center BackgroundTrans", "Введите ID и нажмите Enter")
         y += 62
@@ -201,7 +201,7 @@ BuildFullOverlay() {
     
     if (STATE["overlayInputMode"]) {
         OverlayGui.SetFont("s10 bold", "Consolas")
-        OverlayGui.AddEdit("x80 y8 w80 h24 Background" THEME["bgHighlight"] " c" THEME["accent"] " vOvInputId ReadOnly Center", STATE["tempId"])
+        OverlayGui.AddEdit("x80 y8 w80 h24 Background" THEME["field"] " c" THEME["accent"] " vOvInputId ReadOnly Center", STATE["tempId"])
     } else {
         OverlayGui.SetFont("s11 bold", "Consolas")
         patColor := STATE["patientId"]="" ? THEME["textMuted"] : THEME["success"]

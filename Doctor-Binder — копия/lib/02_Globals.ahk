@@ -11,53 +11,84 @@ global FILTERS_FILE := Constants.FILTERS_FILE
 global APP_NAME := Constants.APP_NAME  ; <--- Этой строки не хватало!
 global AUTHOR := Constants.AUTHOR      ; <--- И этой тоже
 
+; ══════════════════════════════════════════════════════════════════════════════
+;  DESIGN SYSTEM — Dark Premium / Medical Enterprise / Subtle Neon
+;  Правило пропорций: ~90% тёмные поверхности, ~7% серо-синий, ~3% cyan.
+;  Cyan (accent) = сигнал состояния/действия, а не декоративный цвет.
+;  Все имена токенов сохранены для обратной совместимости со старым кодом.
+; ══════════════════════════════════════════════════════════════════════════════
 global THEME := Map(
-    "bg",           "0b1018",
-    "bgLight",      "121a26",
-    "bgElevated",   "182231",
-    "bgHighlight",  "1b2737",
-    "surface",      "121a26",
-    "card",         "151f2d",
-    "field",        "0f1823",
-    "bgSelected",   "20334a",
-    "accent",       "55b9e8",
-    "accentDark",   "176b96",
-    "accentLight",  "8acde8",
-    "accentGlow",   "3ba7e3",
-    "success",      "69c7a4",
-    "successDark",  "216b52",
-    "warning",      "dcb16b",
-    "warningDark",  "8c6223",
-    "error",        "df788b",
-    "errorDark",    "8e3549",
-    "text",         "e7eef7",
-    "textDim",      "9aabc0",
-    "textMuted",    "63758b",
-    "border",       "263548",
-    "borderLight",  "354a62",
-    "borderGlow",   "356f8a",
-    "bgHover",      "223247",
-    "btnBg",        "1b2737",
-    "btnBgHover",   "26384f",
-    "textTitle",    "f1f5fa",
-    "textBody",     "d3dce8",
-    "fontTitle",    20,
-    "fontSection",  13,
-    "fontBody",     10,
-    "fontMeta",     8,
+    ; ── Поверхности ───────────────────────────────────────────────────────────
+    "bg",           "080a0f",   ; фон приложения (почти чёрный)
+    "surface",      "0d1016",   ; основная поверхность: шапка, навигация, карточки
+    "card",         "0d1016",   ; поверхность карточки
+    "bgLight",      "0d1016",   ; legacy-алиас основной поверхности
+    "bgElevated",   "111722",   ; приподнятая поверхность (плитки, вложенные блоки)
+    "bgHighlight",  "111722",   ; legacy-алиас приподнятой поверхности
+    "bgHover",      "151d28",   ; поверхность под курсором
+    "surfaceHover", "151d28",
+    "bgSelected",   "0f1e29",   ; активный элемент навигации (cyan-tinted)
+    "field",        "0d141d",   ; фон поля ввода
+    "fieldBg",      "0d141d",
+    "fieldBorder",  "202d3b",   ; рамка поля ввода
+    "backdrop",     "080a0f",
+
+    ; ── Границы ───────────────────────────────────────────────────────────────
+    "border",       "202833",
+    "borderLight",  "344252",   ; hover-рамка
+    "borderGlow",   "263646",   ; тонкие разделители под шапками таблиц
+
+    ; ── Текст ─────────────────────────────────────────────────────────────────
+    "text",         "f2f4f7",
+    "textTitle",    "f7f9fc",
+    "textBody",     "dde3ea",
+    "textDim",      "9aa4b2",
+    "textMuted",    "626d7b",
+
+    ; ── Акцент (использовать экономно) ────────────────────────────────────────
+    "accent",       "38bdf8",
+    "accentLight",  "7dd3fc",
+    "accentDark",   "1c5f7d",
+    "accentSoft",   "103746",   ; мягкая cyan-подложка (glow, focus ring)
+    "accentGlow",   "1a5872",
+    "btnPrimary",   "0e2a37",   ; фон primary-кнопки
+
+    ; ── Статусы ───────────────────────────────────────────────────────────────
+    "success",      "35c98a",
+    "successDark",  "174a35",
+    "successSoft",  "0f2a20",
+    "warning",      "d9a75c",
+    "warningDark",  "534020",
+    "warningSoft",  "241d12",
+    "error",        "e66b83",
+    "errorDark",    "6d2f3c",
+    "errorSoft",    "24141a",
+
+    ; ── Типографика ───────────────────────────────────────────────────────────
+    "fontTitle",    14,         ; заголовок страницы
+    "fontSection",  10,         ; заголовок карточки
+    "fontBody",     9,
+    "fontMeta",     7,          ; label / caption
     "fontFamily",   "Segoe UI Variable Text",
-    ; === Дизайн-система (единые токены) ===
-    "radiusSm",     8,
-    "radius",       12,
-    "radiusLg",      16,
+    "fontFallback", "Segoe UI",
+    "fontMono",     "Consolas",
+
+    ; ── Геометрия ─────────────────────────────────────────────────────────────
+    "radiusSm",     6,
+    "radius",       10,
+    "radiusLg",     12,
     "spacing",      16,
     "spacingSm",    8,
     "spacingLg",    24,
     "btnH",         38,        ; стандартная высота кнопки
     "btnHSm",       30,        ; малая кнопка
-    "inputH",       30,        ; высота поля ввода
-    "cardPad",      16,        ; внутренний отступ карточки
-    "navH",         28,        ; высота пункта навигации
+    "inputH",       34,        ; высота поля ввода
+    "cardPad",      18,        ; внутренний отступ карточки
+    "navH",         30,        ; высота пункта навигации
+
+    ; ── Legacy-алиасы кнопок ──────────────────────────────────────────────────
+    "btnBg",        "111722",
+    "btnBgHover",   "151d28",
 )
 
 global CFG := Map(
@@ -113,6 +144,8 @@ global STATS := Map("totalSent", 0, "patientsHealed", 0, "pillsGiven", 0, "injec
 global HoverButtons := [], SLOTS := [], UndoHistory := [], FILTERS := Map()
 global MainGui := "", OverlayGui := "", EditorGui := "", FilterMenuGui := "", FilterEditorGui := "", ContextMenuGui := ""
 global g_BtnSaveProfile := "", g_BtnSaveSettings := "", g_BtnGlobalSave := ""
+; Индикаторы единой системы состояний (● READY / ACTIVE / SAVED / WAITING / ERROR)
+global g_SystemStatus := "", g_ProfileStatus := "", g_PatientStatus := "", g_SaveStatus := ""
 global CurrentSearch := "", CurrentFilter := "", CurrentIdFormat := ""
 global OverlayVisible := false, ChatIsOpen := false
 global CapturedEditorKey := "", OverlayInputHook := ""

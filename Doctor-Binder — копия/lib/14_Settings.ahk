@@ -10,8 +10,8 @@ ApplyAndSaveSettings(*) {
     
     ; === 1. ВИЗУАЛЬНЫЙ ЭФФЕКТ (МГНОВЕННЫЙ ОТКЛИК) ===
     if g_BtnSaveSettings {
-        g_BtnSaveSettings.ctrl.Text := "⏳ Сохранение..."
-        try g_BtnSaveSettings.SetVisual(THEME["warning"], THEME["bg"], THEME["warningDark"])
+        g_BtnSaveSettings.ctrl.Text := "СОХРАНЕНИЕ…"
+        try g_BtnSaveSettings.SetVisual(THEME["bgElevated"], THEME["textDim"], THEME["bgElevated"], THEME["border"])
         g_BtnSaveSettings.ctrl.Redraw()
         Sleep(50) ; Даем Windows время перерисовать кнопку перед нагрузкой
     }
@@ -58,7 +58,7 @@ ApplyAndSaveSettings(*) {
     ; === 5. СБРОС КНОПКИ (УСПЕХ) ===
     if g_BtnSaveSettings {
         UpdateButtonState(g_BtnSaveSettings, false)
-        g_BtnSaveSettings.ctrl.Text := "Сохранено"
+        g_BtnSaveSettings.ctrl.Text := "СОХРАНЕНО"
         g_BtnSaveSettings.ctrl.Redraw()
         
         ; Через 1.5 сек возвращаем обычный текст
@@ -68,15 +68,16 @@ ApplyAndSaveSettings(*) {
     ; Если не было изменений в биндах, гасим и главную кнопку
     ; (Если были изменения в биндах, главная кнопка останется гореть, и это правильно)
     
-    ShowNotify("✅ Настройки применены!", "success")
+    ShowNotify("Настройки применены", "success")
     ShowMainGui()
 }
 
 RestoreSettingsBtnText() {
     global g_BtnSaveSettings, THEME
     if g_BtnSaveSettings {
-        g_BtnSaveSettings.ctrl.Text := "Сохранить изменения"
-        try g_BtnSaveSettings.SetVisual(THEME["btnBg"], "66687a", THEME["btnBg"])
+        g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+        ; Нет изменений — кнопка приглушена (disabled-состояние дизайн-системы)
+        try g_BtnSaveSettings.SetEnabledStyle(false)
         g_BtnSaveSettings.ctrl.Redraw()
     }
 }
@@ -116,8 +117,8 @@ SaveEverything() {
     
     ; 1. ВИЗУАЛЬНЫЙ ЭФФЕКТ
     if g_BtnGlobalSave {
-        UpdateButtonState(g_BtnGlobalSave, true, "warning")
-        g_BtnGlobalSave.ctrl.Text := "⏳ СОХРАНЕНИЕ..."
+        UpdateButtonState(g_BtnGlobalSave, true, "primary")
+        g_BtnGlobalSave.ctrl.Text := "СОХРАНЕНИЕ…"
         g_BtnGlobalSave.ctrl.Redraw()
         Sleep(50) ; <-- ВАЖНО: Дать время на отрисовку
     }
@@ -139,24 +140,25 @@ SaveEverything() {
     
     ; 3. ФИНАЛ: СБРОС СОСТОЯНИЯ
     GlobalUnsavedChanges := false
+    try UpdateSaveBar(false)
     
     if g_BtnGlobalSave {
         ; Выключаем кнопку (делаем серой)
         UpdateButtonState(g_BtnGlobalSave, false)
-        g_BtnGlobalSave.ctrl.Text := "Данные сохранены"
+        g_BtnGlobalSave.ctrl.Text := "СОХРАНЕНО"
         
         ; Через 2 секунды возвращаем обычный текст
         SetTimer(() => TryRestoreButtonText(), -2000)
     }
     
-    ShowNotify("✅ Проект успешно сохранён!", "success")
+    ShowNotify("Все изменения сохранены", "success")
 }
 
 ; Вспомогательная функция для таймера (чтобы не было ошибок, если кнопку удалят)
 TryRestoreButtonText() {
     global g_BtnGlobalSave, GlobalUnsavedChanges
     if IsObject(g_BtnGlobalSave) && !GlobalUnsavedChanges
-        g_BtnGlobalSave.ctrl.Text := "Сохранить изменения"
+        g_BtnGlobalSave.ctrl.Text := "СОХРАНИТЬ"
 }
 
 
@@ -239,11 +241,12 @@ AutoSaveTick() {
         SaveConfig()
         SaveCustomFilters()
         GlobalUnsavedChanges := false
+        try UpdateSaveBar(false)
         STATE["lastAutoSave"] := A_Now
         TryRestoreButtonText()
         UpdateAutoSaveStatus()
         Log("Автосохранение выполнено", "INFO")
-        ShowNotify("💾 Автосохранение", "success", 1500)
+        ShowNotify("Автосохранение выполнено", "success", 1500)
     } catch as err {
         LogError(err, "AutoSaveTick")
     }
@@ -554,10 +557,15 @@ SetIdFormatGUI(fmt) {
     
     for id, btn in IdFormatButtons {
         active := (id = fmt)
-        btn.SetVisual(active ? THEME["bgSelected"] : THEME["bgHighlight"],
-            active ? THEME["accent"] : THEME["textDim"], THEME["bgHover"])
+        if active
+            btn.SetVisual(THEME["bgSelected"], THEME["accent"], THEME["bgSelected"], THEME["accentDark"], THEME["accent"])
+        else
+            btn.SetVisual(THEME["bgElevated"], THEME["textDim"], THEME["bgHover"], THEME["border"])
     }
-    
+
+    ; Карточка «Текущий пациент» показывает актуальный формат вставки
+    try UpdatePatientCard()
+
     CheckSettingsDirty()
 }
 
@@ -624,7 +632,7 @@ MoveScreenshotToFolder(targetPath) {
             FileMove latestFile, finalDir "\" newName
             
             ; Тихое уведомление
-            ShowNotify("📂 Скриншот сохранён!", "success", 1500)
+            ShowNotify("Скриншот сохранён!", "success", 1500)
         }
     }
 }
@@ -679,8 +687,8 @@ DeleteScreenRule() {
     try {
         if g_BtnSaveSettings {
             g_BtnSaveSettings.isClickable := true
-            g_BtnSaveSettings.ctrl.Text := "Сохранить изменения (!)"
-            try g_BtnSaveSettings.SetVisual(THEME["btnPrimary"], "ffffff", THEME["accent"])
+            g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            try g_BtnSaveSettings.SetEnabledStyle(true, "primary")
             g_BtnSaveSettings.ctrl.Redraw()
         }
     }
@@ -717,8 +725,8 @@ SaveRuleFromGui(gui, editIndex) {
     try {
         if g_BtnSaveSettings {
             g_BtnSaveSettings.isClickable := true
-            g_BtnSaveSettings.ctrl.Text := "Сохранить изменения (!)"
-            try g_BtnSaveSettings.SetVisual(THEME["btnPrimary"], "ffffff", THEME["accent"])
+            g_BtnSaveSettings.ctrl.Text := "СОХРАНИТЬ ИЗМЕНЕНИЯ"
+            try g_BtnSaveSettings.SetEnabledStyle(true, "primary")
             g_BtnSaveSettings.ctrl.Redraw()
         }
     }
@@ -750,53 +758,45 @@ ShowRuleEditor(editIndex := 0) {
     ; Создаем окно (Без заголовка винды, с рамкой)
     RuleEditorGui := Gui("-Caption +Border +AlwaysOnTop +Owner" MainGui.Hwnd, "RuleEditor")
     RuleEditorGui.BackColor := THEME["bg"]
-    RuleEditorGui.SetFont("s10 c" THEME["text"], "Segoe UI")
-    
+    RuleEditorGui.SetFont("s10 c" THEME["text"], THEME["fontFamily"])
+
     w := 440
-    h := 360
-    
+    h := 372
+
     ; --- ШАПКА ---
-    RuleEditorGui.AddText("x0 y0 w" w " h40 Background" THEME["bgLight"], "")
-    RuleEditorGui.SetFont("s11 bold", "Segoe UI")
-    RuleEditorGui.AddText("x20 y10 w300 c" THEME["accent"] " BackgroundTrans", titleText)
-    
+    RuleEditorGui.AddText("x0 y0 w" w " h48 Background" THEME["surface"], "")
+    RuleEditorGui.AddText("x0 y47 w" w " h1 Background" THEME["border"], "")
+    RuleEditorGui.SetFont("s11 bold", THEME["fontFamily"])
+    RuleEditorGui.AddText("x20 y14 w300 c" THEME["textTitle"] " BackgroundTrans", titleText)
+
     ; Кнопка закрытия
-    CloseBtn := CreateStyledButton(RuleEditorGui, w-44, 4, 36, 32, "x", (*) => RuleEditorGui.Destroy(), "danger")
-    CloseBtn.ctrl.SetFont("s10 bold", "Segoe UI")
-    
-    y := 60
+    CloseBtn := CreateStyledButton(RuleEditorGui, w-44, 8, 32, 32, "×", (*) => RuleEditorGui.Destroy(), "icon")
+    CloseBtn.SetBackdrop(THEME["surface"])
+    CloseBtn.ctrl.SetFont("s12 norm", "Segoe UI")
+
+    y := 68
     x := 25
     inputW := 390
-    
+
     ; --- ПОЛЯ ВВОДА ---
-    RuleEditorGui.SetFont("s9", "Segoe UI")
-    RuleEditorGui.AddText("x" x " y" y " w300 c" THEME["textDim"] " BackgroundTrans", "Название папки (например: Лечение):")
-    RuleEditorGui.SetFont("s10", "Segoe UI")
-    RuleEditorGui.AddEdit("x" x " y" (y+25) " w" inputW " h32 vRuleName Background" THEME["bgHighlight"] " c" THEME["text"], data["name"])
-    
-    y += 75
-    RuleEditorGui.SetFont("s9", "Segoe UI")
-    RuleEditorGui.AddText("x" x " y" y " w300 c" THEME["textDim"] " BackgroundTrans", "Фраза в чате (Триггер):")
-    RuleEditorGui.SetFont("s10", "Segoe UI")
-    RuleEditorGui.AddEdit("x" x " y" (y+25) " w" inputW " h32 vRulePhrase Background" THEME["bgHighlight"] " c" THEME["text"], data["phrase"])
-    
-    y += 75
-    RuleEditorGui.SetFont("s9", "Segoe UI")
-    RuleEditorGui.AddText("x" x " y" y " w300 c" THEME["textDim"] " BackgroundTrans", "Путь сохранения:")
-    RuleEditorGui.SetFont("s10", "Segoe UI")
-    
-    ; Поле пути и кнопка в один ряд
-    RuleEditorGui.AddEdit("x" x " y" (y+25) " w" (inputW-50) " h32 ReadOnly vRulePath Background" THEME["bgHighlight"] " c" THEME["textDim"], data["path"])
-    
-    ; Кнопка папки
-    CreateStyledButton(RuleEditorGui, x+inputW-40, y+25, 40, 32, "⋯", (*) => BrowseRuleFolder(RuleEditorGui), "info")
-    
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "НАЗВАНИЕ ПАПКИ")
+    CreateInput(RuleEditorGui, x, y+18, inputW, THEME["inputH"], "vRuleName", data["name"], 10, THEME["bg"])
+
+    y += 76
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "ФРАЗА В ЧАТЕ (ТРИГГЕР)")
+    CreateInput(RuleEditorGui, x, y+18, inputW, THEME["inputH"], "vRulePhrase", data["phrase"], 10, THEME["bg"])
+
+    y += 76
+    CreateFieldLabel(RuleEditorGui, x, y, 300, "ПУТЬ СОХРАНЕНИЯ")
+    CreateInput(RuleEditorGui, x, y+18, inputW-46, THEME["inputH"], "ReadOnly vRulePath", data["path"], 9, THEME["bg"])
+    CreateStyledButton(RuleEditorGui, x+inputW-40, y+18, 40, THEME["inputH"], "…", (*) => BrowseRuleFolder(RuleEditorGui), "default").SetBackdrop(THEME["bg"])
+
     ; --- ПОДВАЛ ---
-    y += 85
-    RuleEditorGui.AddText("x20 y" (y-15) " w" (w-40) " h2 Background" THEME["borderGlow"], "")
-    
-    CreateStyledButton(RuleEditorGui, 20, y, 190, 40, "Сохранить", (*) => SaveRuleFromGui(RuleEditorGui, editIndex), "success")
-    CreateStyledButton(RuleEditorGui, 230, y, 190, 40, "Отмена", (*) => RuleEditorGui.Destroy(), "danger")
+    y += 84
+    RuleEditorGui.AddText("x20 y" (y-16) " w" (w-40) " h1 Background" THEME["border"], "")
+
+    CreateStyledButton(RuleEditorGui, 20, y, 190, 40, "Отмена", (*) => RuleEditorGui.Destroy(), "default").SetBackdrop(THEME["bg"])
+    CreateStyledButton(RuleEditorGui, 230, y, 190, 40, "СОХРАНИТЬ", (*) => SaveRuleFromGui(RuleEditorGui, editIndex), "primary").SetBackdrop(THEME["bg"])
     
     ; Центрирование
     RuleEditorGui.Show("w" w " h" h)

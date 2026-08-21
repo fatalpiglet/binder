@@ -282,11 +282,14 @@ CaptureHotkeyVisual(slotIdx) {
     captureGui := Gui("+AlwaysOnTop +Owner" MainGui.Hwnd, "Захват клавиши — " slot["name"])
     captureGui.BackColor := THEME["bg"]
     captureGui.SetFont("s11 c" THEME["text"], "Segoe UI")
-    captureGui.AddText("x30 y20 w440 c" THEME["accent"] " BackgroundTrans", "Нажмите нужную клавишу")
+    captureGui.AddText("x30 y20 w440 c" THEME["textTitle"] " BackgroundTrans", "Нажмите нужную клавишу")
     captureGui.SetFont("s9 c" THEME["textDim"], "Segoe UI")
     captureGui.AddText("x30 y50 w440 BackgroundTrans", "Примеры: F1, Ctrl+1, Alt+F5, Numpad3")
-    captureGui.SetFont("s16 bold", "Consolas")
-    display := captureGui.AddText("x30 y90 w440 h50 Center Border Background" THEME["bgHighlight"] " c" THEME["warning"], "⏳ Ожидание...")
+    captureGui.SetFont("s14 bold", THEME["fontMono"])
+    frameCap := captureGui.AddText("x30 y90 w440 h50 Background" THEME["fieldBorder"], "")
+    RoundCorners(frameCap, 440, 50, THEME["radiusSm"])
+    display := captureGui.AddText("x31 y91 w438 h48 Center 0x200 Background" THEME["field"] " c" THEME["textDim"], "Ожидание…")
+    RoundCorners(display, 438, 48, THEME["radiusSm"])
     statusText := captureGui.AddText("x30 y150 w440 Center c" THEME["textMuted"] " BackgroundTrans", "")
     ih := InputHook("L0 T30")
     ih.KeyOpt("{All}", "N")
@@ -294,7 +297,7 @@ CaptureHotkeyVisual(slotIdx) {
     captureGui.SetFont("s10", "Segoe UI")
     CreateStyledButton(captureGui, 30, 180, 140, 40, "Отмена", (*) => (ih.Stop(), captureGui.Destroy()), "default")
     CreateStyledButton(captureGui, 180, 180, 140, 40, "Сброс", (*) => (display.Text := "", CapturedEditorKey := ""), "default")
-    CreateStyledButton(captureGui, 330, 180, 140, 40, "OK", (*) => (ih.Stop(), ApplyCapturedKeyToSlot(CapturedEditorKey, slotIdx, captureGui)), "success")
+    CreateStyledButton(captureGui, 330, 180, 140, 40, "OK", (*) => (ih.Stop(), ApplyCapturedKeyToSlot(CapturedEditorKey, slotIdx, captureGui)), "primary")
     captureGui.OnEvent("Close", (*) => (ih.Stop(), captureGui.Destroy()))
     captureGui.Show("w500 h240")
     ih.Start()
@@ -362,10 +365,10 @@ GlobalBlinkTick() {
         ctrl := MainGui["Display_" CurrentCapturing]
         blinkState := !blinkState
         if blinkState {
-            SetButtonVisualByControl(ctrl, THEME["warning"], THEME["bgHighlight"])
+            SetButtonVisualByControl(ctrl, THEME["warning"], THEME["field"])
             ctrl.Text := ">>> ЖДУ <<<"
         } else {
-            SetButtonVisualByControl(ctrl, THEME["error"], THEME["bgHighlight"])
+            SetButtonVisualByControl(ctrl, THEME["error"], THEME["field"])
             ctrl.Text := " НАЖМИТЕ "
         }
         ctrl.Redraw()
@@ -467,7 +470,7 @@ FinalizeCapture(keyType, fullKey, conflictText := "") {
         MainGui["Value_" keyType].Value := fullKey
         ctrl := MainGui["Display_" keyType]
         ctrl.Text := FormatHotkey(fullKey)
-        SetButtonVisualByControl(ctrl, THEME["accent"], THEME["bgHighlight"])
+        SetButtonVisualByControl(ctrl, THEME["accent"], THEME["field"])
         ctrl.Redraw()
         if (conflictText != "") {
              try {
@@ -495,7 +498,7 @@ CancelCapture(keyType) {
         ctrl := MainGui["Display_" keyType]
         ctrl.Text := oldVal = "" ? "—" : FormatHotkey(oldVal)
         color := oldVal = "" ? THEME["textMuted"] : THEME["accent"]
-        SetButtonVisualByControl(ctrl, color, THEME["bgHighlight"])
+        SetButtonVisualByControl(ctrl, color, THEME["field"])
         ctrl.Redraw()
     }
 }
@@ -531,7 +534,7 @@ ShowConflictDialog(key, conflictName, slotIdx, parentGui) {
     conflictGui.BackColor := THEME["bg"]
     conflictGui.MarginX := 0
     conflictGui.MarginY := 0
-    conflictGui.AddText("x0 y0 w500 h8 Background" THEME["error"], "")
+    conflictGui.AddText("x0 y0 w500 h3 Background" THEME["error"], "")
     conflictGui.SetFont("s12 bold", "Segoe UI")
     conflictGui.AddText("x30 y25 w440 c" THEME["error"] " BackgroundTrans", "Конфликт клавиш")
     conflictGui.SetFont("s10 norm", "Segoe UI")
@@ -547,7 +550,7 @@ ShowConflictDialog(key, conflictName, slotIdx, parentGui) {
     conflictGui.AddText("x30 y200 w440 c" THEME["text"] " Center BackgroundTrans", "Заменить конфликтующую клавишу?")
     conflictGui.SetFont("s9", "Segoe UI")
     conflictGui.AddText("x30 y225 w440 c" THEME["textDim"] " Center BackgroundTrans", "(У старого бинда клавиша будет удалена)")
-    conflictGui.AddText("x30 y255 w440 h2 Background" THEME["borderGlow"], "")
+    conflictGui.AddText("x30 y255 w440 h1 Background" THEME["border"], "")
     conflictGui.SetFont("s10 bold", "Segoe UI")
     CreateStyledButton(conflictGui, 30, 270, 200, 45, "Да, заменить", (*) => ConfirmReplace(key, slotIdx, parentGui, conflictGui), "success")
     CreateStyledButton(conflictGui, 240, 270, 230, 45, "Нет, выбрать другую", (*) => conflictGui.Destroy(), "danger")
@@ -580,7 +583,7 @@ ShowEditorConflictDialog(key, conflictName) {
     conflictGui.BackColor := THEME["bg"]
     conflictGui.MarginX := 0
     conflictGui.MarginY := 0
-    conflictGui.AddText("x0 y0 w500 h8 Background" THEME["error"], "")
+    conflictGui.AddText("x0 y0 w500 h3 Background" THEME["error"], "")
     conflictGui.SetFont("s12 bold", "Segoe UI")
     conflictGui.AddText("x30 y25 w440 c" THEME["error"] " BackgroundTrans", "Конфликт клавиш")
     conflictGui.SetFont("s10 norm", "Segoe UI")

@@ -31,12 +31,16 @@ ShowNotify(text, type := "info", duration := 2000) {
     }
 
     NotifyGui := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x20", "Notify")
-    NotifyGui.BackColor := THEME["bg"]
+    NotifyGui.BackColor := THEME["border"]
     NotifyGui.MarginX := 0
     NotifyGui.MarginY := 0
-    NotifyGui.AddText("x0 y0 w5 h50 Background" color)
-    NotifyGui.SetFont("s10", "Segoe UI")
-    NotifyGui.AddText("x18 y15 w300 c" THEME["text"] " BackgroundTrans", text)
+    ; Тонкая рамка (фон окна) + основная поверхность внутри
+    NotifyGui.AddText("x1 y1 w318 h48 Background" THEME["surface"], "")
+    ; Маленькая статус-точка вместо широкой цветной полосы
+    dot := NotifyGui.AddText("x16 y22 w7 h7 Background" color, "")
+    RoundCorners(dot, 7, 7, 4)
+    NotifyGui.SetFont("s9 norm", THEME["fontFamily"])
+    NotifyGui.AddText("x34 y16 w270 h20 c" THEME["textBody"] " BackgroundTrans", text)
 
     NotifyBaseX := A_ScreenWidth - 340
     NotifyBaseY := A_ScreenHeight - 110
